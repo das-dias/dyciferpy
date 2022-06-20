@@ -66,7 +66,7 @@ def plotPrettyFFT(
     #define font family to use for all text
     rcParams['font.family'] = 'serif'
     #plt.figure(figsize=(8,6))
-    markerline, stemlines, baseline = plt.stem(freq, power,bottom=min(power), linefmt='b-', markerfmt='mD', basefmt='k-.')
+    markerline, stemlines, baseline = plt.stem(freq, power,bottom=min(power), linefmt='b-', markerfmt='bD', basefmt='k-.')
     markerline.set_markerfacecolor('none')
     # highlight the spectral signal components
     signal_freq = freq[where(power == max(power[1:]))] # don't count the dc component
@@ -89,3 +89,4 @@ def plotPrettyFFT(
         if not os.path.exists(getParent(file_path)):
             raise FileNotFoundError(f"Directory does not exist : {getParent(file_path)}")
         plt.savefig(file_path)
+    plt.clf()

@@ -39,6 +39,7 @@ def mixedSignalsDynamicEval(subparser, *args, **kwargs):
             v_source=v_source,
             harmonics=harmonics, 
             signal_span_factor=signal_span,
+            asceding_bit_order=argv.ascending
         )
         # prepare to plot resulting information
         dynamic_eval_indicators = DataFrame(
@@ -55,8 +56,8 @@ def mixedSignalsDynamicEval(subparser, *args, **kwargs):
         )
         if argv.plot:
             plotPrettyFFT(
-                spectrum[spectrum.index.values>0].index, # plot only positive frequencies spectrum
-                spectrum[spectrum.index.values>0]["power_db"],
+                spectrum[spectrum.index.values>=0].index, # plot only positive frequencies spectrum
+                spectrum[spectrum.index.values>=0]["power_db"],
                 title="Signal Spectrum (dB)",
                 xlabel= "Frequency (Hz)",
                 ylabel= "Power (dB)",
@@ -65,7 +66,7 @@ def mixedSignalsDynamicEval(subparser, *args, **kwargs):
             )
         if bool(argv.output_dir):
             plotPrettyFFT(
-                spectrum[spectrum.index.values>=0].index, # plot only positive frequencies spectrum
+                spectrum[spectrum.index>=0].index, # plot only positive frequencies spectrum
                 spectrum[spectrum.index.values>=0]["power_db"],
                 title="Signal Spectrum (dB)",
                 xlabel= "Frequency (Hz)",
@@ -101,6 +102,7 @@ def adcDynamicEval(
     v_source:float=1.0,
     harmonics:int=7,
     signal_span_factor:float=0.0,
+    asceding_bit_order:bool=False,
 ) -> tuple[DataFrame, float, float, float, float, float, float, float]:
     """_summary_
     Dynamic performance evaluation of Analog-to-Digital Converter circuits
@@ -116,6 +118,8 @@ def adcDynamicEval(
         harmonics (int, optional): The number of harmonics considered in the analysis of the harmonic distortion of the ADC. Defaults to 7.
         singal_span_factor (float, optional): Percentual factor determining how much of the signal's
                                                 power is dispersed onto the remanescent spectrum of the signal's spectrum. Defaults to 0.0
+        ascending_bit_order (bool, optional): When parsing bit signals (and not output word), indicate if the columns of each bit (in the signals dataframe)
+                                                are in ascending or descending order. Defaults to False.
     Returns:
         tuple(DataFrame, float(1), float(2), float(3), float(4), float(5), float(6), float(7)): 
             DataFrame: The frequency spectrum of the ADC's output signal in volt, volt squared (power) and decibels.
@@ -167,7 +171,10 @@ def adcDynamicEval(
             dout[col][dout[col]<=means[col]] = 0
             dout[col][dout[col]>means[col]] = 1
         def join_bits(row):
-            return "".join(map(lambda b: str(int(b)), row.values))
+            if not asceding_bit_order:
+                return "".join(map(lambda b: str(int(b)), row.values))
+            else:
+                return "".join(map(lambda b: str(int(b))), np.flipud(row.values))
         dout["bin_word"] = dout.apply(join_bits, axis=1)
         dout["dec_word"] = dout["bin_word"].apply(lambda bin: int(bin, 2))
         # recenter the decoded word in 0 and scale it to [-1; +1]

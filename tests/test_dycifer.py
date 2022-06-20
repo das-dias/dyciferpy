@@ -139,6 +139,26 @@ class TestDycifer(unittest.TestCase):
         ]
         with self.assertRaises(SystemExit):
             cli(args)
+            
+    def test_dycifer_cli_mixed_signals_adcDynamicEval_cadence_data(self):
+        """_summary_
+        Testing the mixed-signals CLI to evaluate the ADC dynamic performance
+        with signals provenient directly from Cadence.
+        """
+        args=[
+            "mixed-signals",
+            "-adc",
+            "-s",
+            "./resources/data/fft_points_c2c_256_bin7.csv",
+            "-fs",
+            "1 G",
+            "-gt",
+            "-o",
+            "./resources/tables_jonny",
+            "-p",
+        ]
+        with self.assertRaises(SystemExit):
+            cli(args)
     
 if __name__ == '__main__':
     unittest.main()

@@ -27,7 +27,8 @@ __cmd_args = {
         "-bit": ("--bit-resolution", "Bit-wise resolution of the ADC/DAC", "<#bits>", int, "opt"),
         "-vs": ("--voltage-source", "Voltage source of the ADC/DAC", "<voltage>", float, "opt"),
         "-nh": ("--harmonics", "Number of harmonics of the output signal power considered during THD computation", "<#harmonics>", int, "opt"),
-        "-ss": ("--signal-span", "Spectral dispertion factor of the output signal power", "<decimal>", float, "opt")
+        "-ss": ("--signal-span", "Spectral dispertion factor of the output signal power", "<decimal>", float, "opt"),
+        "-a": ("--ascending", "Boolean value indicating if the signals of each Bit are in ascending bit order or not", "", bool, "opt")
     },
     "-a":{
         "-cmp":("--comparator", "Compararator dynamic performance evaluation", "", bool, "opt"),
