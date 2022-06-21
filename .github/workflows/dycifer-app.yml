@@ -23,11 +23,20 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: "3.10"
+    - uses: Gr1N/setup-poetry@v7
+      with:
+        poetry-version: "1.1.13"
+    - run: poetry --version
     - name: Install dependencies
+    # poetry install installs all the dependencies, so the final line is not necessary
       run: |
         python -m pip install --upgrade pip
         pip install flake8 unittest
+        poetry install
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    - name: Check Dycifer Version
+      run: |
+        poetry run dycifer --version
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
@@ -36,4 +45,4 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with unittest
       run: |
-        pytest
+        poetry run python -m unittest tests/test_dycifer.py
