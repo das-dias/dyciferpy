@@ -4,6 +4,7 @@ def analogDynamicEval(subparser, *args, **kwargs):
     """
     raise NotImplementedError("analogDynamicEval: Not implemented yet.")
 
+
 def comparatorDynamicEval(subparser, *args, **kwargs):
     """_summary_
     Dynamic performance evaluation of Comparator circuits
