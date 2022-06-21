@@ -31,7 +31,7 @@ jobs:
     # poetry install installs all the dependencies, so the final line is not necessary
       run: |
         python -m pip install --upgrade pip
-        pip install flake8 unittest
+        pip install flake8 pytest
         poetry install
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Check Dycifer Version
