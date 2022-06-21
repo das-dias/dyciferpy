@@ -8,6 +8,7 @@ from dycifer.read import readSignals
 from dycifer.utils import plotPrettyFFT
 from modelling_utils import stof, timer
 
+
 def mixedSignalsDynamicEval(subparser, *args, **kwargs):
     """_summary_
     Dynamic performance evaluation of Mixed Signals circuits
@@ -20,26 +21,30 @@ def mixedSignalsDynamicEval(subparser, *args, **kwargs):
     except Exception as e:
         log.error(traceback.format_exc())
     # from the signals argument (containing the signals file filepath)
-    # extract the signals 
+    # extract the signals
     signals = readSignals(argv.signals[0])
-    time_col = bool(signals.index.name) # if the index column has a name, it is the time column
+    time_col = bool(
+        signals.index.name
+    )  # if the index column has a name, it is the time column
     if argv.analog_to_digital:
-        sampling_freq = stof(argv.sampling_frequency[0]) # convert the parsed string to a float
+        sampling_freq = stof(
+            argv.sampling_frequency[0]
+        )  # convert the parsed string to a float
         res = argv.bit_resolution[0] if bool(argv.bit_resolution) else -1
         v_source = argv.voltage_source[0] if bool(argv.voltage_source) else 1.0
         harmonics = argv.harmonics[0] if bool(argv.harmonics) else 7
         signal_span = argv.signal_span[0] if bool(argv.signal_span) else 0.0
-        #pdb.set_trace()
+        # pdb.set_trace()
         # perform dynamic performance evaluation
         spectrum, signal_power, dc_power, sfdr, thd, snr, sndr, enob = adcDynamicEval(
-            signals, 
+            signals,
             sampling_freq,
             time_col=time_col,
             n_bits=res,
             v_source=v_source,
-            harmonics=harmonics, 
+            harmonics=harmonics,
             signal_span_factor=signal_span,
-            asceding_bit_order=argv.ascending
+            asceding_bit_order=argv.ascending,
         )
         # prepare to plot resulting information
         dynamic_eval_indicators = DataFrame(
@@ -56,30 +61,42 @@ def mixedSignalsDynamicEval(subparser, *args, **kwargs):
         )
         if argv.plot:
             plotPrettyFFT(
-                spectrum[spectrum.index.values>=0].index, # plot only positive frequencies spectrum
-                spectrum[spectrum.index.values>=0]["power_db"],
+                spectrum[
+                    spectrum.index.values >= 0
+                ].index,  # plot only positive frequencies spectrum
+                spectrum[spectrum.index.values >= 0]["power_db"],
                 title="Signal Spectrum (dB)",
-                xlabel= "Frequency (Hz)",
-                ylabel= "Power (dB)",
+                xlabel="Frequency (Hz)",
+                ylabel="Power (dB)",
                 show=True,
-                xlog=False
+                xlog=False,
             )
         if bool(argv.output_dir):
             plotPrettyFFT(
-                spectrum[spectrum.index>=0].index, # plot only positive frequencies spectrum
-                spectrum[spectrum.index.values>=0]["power_db"],
+                spectrum[
+                    spectrum.index >= 0
+                ].index,  # plot only positive frequencies spectrum
+                spectrum[spectrum.index.values >= 0]["power_db"],
                 title="Signal Spectrum (dB)",
-                xlabel= "Frequency (Hz)",
-                ylabel= "Power (dB)",
+                xlabel="Frequency (Hz)",
+                ylabel="Power (dB)",
                 show=False,
                 file_path=os.path.join(argv.output_dir[0], "signal_spectrum.png"),
             )
             if argv.generate_table:
                 tablename = argv.output_dir[0]
-                dynamic_eval_indicators.to_csv(os.path.join(tablename, "adc_spectrum.csv"))
-                dynamic_eval_indicators.to_json(os.path.join(tablename, "adc_spectrum.json"))
-                dynamic_eval_indicators.to_markdown(os.path.join(tablename, "adc_spectrum.md"))
-                dynamic_eval_indicators.to_latex(os.path.join(tablename, "adc_spectrum.tex"))
+                dynamic_eval_indicators.to_csv(
+                    os.path.join(tablename, "adc_spectrum.csv")
+                )
+                dynamic_eval_indicators.to_json(
+                    os.path.join(tablename, "adc_spectrum.json")
+                )
+                dynamic_eval_indicators.to_markdown(
+                    os.path.join(tablename, "adc_spectrum.md")
+                )
+                dynamic_eval_indicators.to_latex(
+                    os.path.join(tablename, "adc_spectrum.tex")
+                )
         # print indicators to console
         print()
         print(dynamic_eval_indicators.T)
@@ -90,19 +107,22 @@ def mixedSignalsDynamicEval(subparser, *args, **kwargs):
     elif bool(argv.sigma_delta_dac):
         raise NotImplementedError("sigma_delta_dac: Not implemented yet.")
     else:
-        raise ValueError("No mixed-signals system class was specified was specified. Missing --analog-to-digital, --digital-to-analog, --sigma-delta-adc or --sigma-delta-dac.")
+        raise ValueError(
+            "No mixed-signals system class was specified was specified. Missing --analog-to-digital, --digital-to-analog, --sigma-delta-adc or --sigma-delta-dac."
+        )
     return
+
 
 @timer
 def adcDynamicEval(
-    signals:DataFrame,
-    f_sampling:float,
-    time_col:bool=True,
-    n_bits:int=-1, 
-    v_source:float=1.0,
-    harmonics:int=7,
-    signal_span_factor:float=0.0,
-    asceding_bit_order:bool=False,
+    signals: DataFrame,
+    f_sampling: float,
+    time_col: bool = True,
+    n_bits: int = -1,
+    v_source: float = 1.0,
+    harmonics: int = 7,
+    signal_span_factor: float = 0.0,
+    asceding_bit_order: bool = False,
 ) -> tuple[DataFrame, float, float, float, float, float, float, float]:
     """_summary_
     Dynamic performance evaluation of Analog-to-Digital Converter circuits
@@ -121,7 +141,7 @@ def adcDynamicEval(
         ascending_bit_order (bool, optional): When parsing bit signals (and not output word), indicate if the columns of each bit (in the signals dataframe)
                                                 are in ascending or descending order. Defaults to False.
     Returns:
-        tuple(DataFrame, float(1), float(2), float(3), float(4), float(5), float(6), float(7)): 
+        tuple(DataFrame, float(1), float(2), float(3), float(4), float(5), float(6), float(7)):
             DataFrame: The frequency spectrum of the ADC's output signal in volt, volt squared (power) and decibels.
             float(1): Signal's power in decibels
             float(2): Signal's DC power
@@ -132,13 +152,17 @@ def adcDynamicEval(
             float(7): Effective Number of Bits (effective ADC resolution) metric
     """
     # extract the sampling frequency from the function inputs
-    ts = 1.0/f_sampling
+    ts = 1.0 / f_sampling
     fs = f_sampling
     if time_col:
         if signals.index.values[1] - signals.index.values[0] != ts:
-            step_points = int(round(ts/(signals.index.values[1] - signals.index.values[0])))
+            step_points = int(
+                round(ts / (signals.index.values[1] - signals.index.values[0]))
+            )
             if step_points < 1:
-                raise ValueError("Sampling frequency must be equal or lower than the signals' time resolution.")
+                raise ValueError(
+                    "Sampling frequency must be equal or lower than the signals' time resolution."
+                )
             # downsample the signals to the sampling frequency effectively parsed as input
             signals = signals[::step_points]
 
@@ -148,11 +172,13 @@ def adcDynamicEval(
     * * data frame already contains the constructed dout decimal words.
     * ***********************************************************************************
     """
-    if n_bits > 0 and len(signals.columns)>1:
-        raise ValueError(f"The number of bits was provided as input, but the signals data frame does not present the constructed digital output word of the ADC. Expected {1} signal, found {len(signals.columns)} signals.")
+    if n_bits > 0 and len(signals.columns) > 1:
+        raise ValueError(
+            f"The number of bits was provided as input, but the signals data frame does not present the constructed digital output word of the ADC. Expected {1} signal, found {len(signals.columns)} signals."
+        )
     # extract the number of bits of the ADC
-    resolution=n_bits if n_bits > 0 else len(signals.columns)
-    #v_step = v_source / ((2 ** resolution)-1)
+    resolution = n_bits if n_bits > 0 else len(signals.columns)
+    # v_step = v_source / ((2 ** resolution)-1)
     n_samples = len(signals.index)
     """
     * ***********************************************************************************
@@ -168,34 +194,40 @@ def adcDynamicEval(
         for col in signals.columns:
             means[col] = signals[col].mean()
         for col in dout.columns:
-            dout[col][dout[col]<=means[col]] = 0
-            dout[col][dout[col]>means[col]] = 1
+            dout[col][dout[col] <= means[col]] = 0
+            dout[col][dout[col] > means[col]] = 1
+
         def join_bits(row):
             if not asceding_bit_order:
                 return "".join(map(lambda b: str(int(b)), row.values))
             else:
                 return "".join(map(lambda b: str(int(b))), np.flipud(row.values))
+
         dout["bin_word"] = dout.apply(join_bits, axis=1)
         dout["dec_word"] = dout["bin_word"].apply(lambda bin: int(bin, 2))
         # recenter the decoded word in 0 and scale it to [-1; +1]
-        dout["vout"] = dout["dec_word"]/(2**resolution-1)*2 - 1.0
-        dout["vout"] = dout["vout"]*v_source
+        dout["vout"] = dout["dec_word"] / (2**resolution - 1) * 2 - 1.0
+        dout["vout"] = dout["vout"] * v_source
     else:
-        dout["vout"] = dout[dout.columns]/(2**resolution-1)*2 - 1.0
-        dout["vout"] = dout["vout"]*v_source
+        dout["vout"] = dout[dout.columns] / (2**resolution - 1) * 2 - 1.0
+        dout["vout"] = dout["vout"] * v_source
     dout = dout["vout"]
     """
     * ***********************************************************************************
     * * Fast Fourier Transform (FFT) of the Dout Signal
     * ***********************************************************************************
     """
-    vout = np.abs(np.fft.fftshift(np.fft.fft(dout.values)/n_samples)) # [V]
-    freq = np.fft.fftshift(np.fft.fftfreq(len(vout), ts)) # [Hz]
-    power = vout * vout # [V^2] - square the voltage spectrum to obtain the power spectrum
-    power_db = 10*np.log10(power) # [dB] - convert the power spectrum to dB
-    spectrum = DataFrame(index=freq, data={"vout":vout, "power":power, "power_db":power_db})
+    vout = np.abs(np.fft.fftshift(np.fft.fft(dout.values) / n_samples))  # [V]
+    freq = np.fft.fftshift(np.fft.fftfreq(len(vout), ts))  # [Hz]
+    power = (
+        vout * vout
+    )  # [V^2] - square the voltage spectrum to obtain the power spectrum
+    power_db = 10 * np.log10(power)  # [dB] - convert the power spectrum to dB
+    spectrum = DataFrame(
+        index=freq, data={"vout": vout, "power": power, "power_db": power_db}
+    )
     # positive frequencies spectrum
-    pspectrum = spectrum[spectrum.index>=0].copy()
+    pspectrum = spectrum[spectrum.index >= 0].copy()
     """
     * ***********************************************************************************
     * * Computation of :
@@ -212,74 +244,100 @@ def adcDynamicEval(
     # Obtaining the ADC's output signal power
     # ********************************************
     # determine the span of the signal's spectrum to consider it's total dispersed power
-    span = np.max([1, int(np.floor(signal_span_factor*len(pspectrum.index)))])
+    span = np.max([1, int(np.floor(signal_span_factor * len(pspectrum.index)))])
     # obtain the signal frequency bin
-    signal_bin = pspectrum["power"][0+span:].idxmax() # don't count DC signal when searching for the signal bin
+    signal_bin = pspectrum["power"][
+        0 + span :
+    ].idxmax()  # don't count DC signal when searching for the signal bin
     # obtain the harmonics of the signal from the signal bin
-    harmonic_bins = [mult*signal_bin for mult in range(1, harmonics+1) if mult*signal_bin <= np.max(freq)]
+    harmonic_bins = [
+        mult * signal_bin
+        for mult in range(1, harmonics + 1)
+        if mult * signal_bin <= np.max(freq)
+    ]
     # tones that surpass Fs are aliased back to [0, Fs/2] spectrum
-    harmonic_bins = [fs-bin if bin > fs/2 else bin for bin in harmonic_bins]
+    harmonic_bins = [fs - bin if bin > fs / 2 else bin for bin in harmonic_bins]
     # indexes of the harmonic bins
     harmonic_bins_idxs = [pspectrum.index.get_loc(bin) for bin in harmonic_bins]
-    harmonics_power = np.array([np.sum(pspectrum["power"].iloc[harmonic_bin_idx-span:harmonic_bin_idx+span].values) for harmonic_bin_idx in harmonic_bins_idxs])
-    # obtain the signal_power 
+    harmonics_power = np.array(
+        [
+            np.sum(
+                pspectrum["power"]
+                .iloc[harmonic_bin_idx - span : harmonic_bin_idx + span]
+                .values
+            )
+            for harmonic_bin_idx in harmonic_bins_idxs
+        ]
+    )
+    # obtain the signal_power
     signal_power = harmonics_power[0]
-    SIGNAL_POWER_DB = 10*np.log10(signal_power)
-    signal_dc_power = np.sum(pspectrum["power"].iloc[0:0+span].values)
-    DC_POWER_DB = 10*np.log10(signal_dc_power)
+    SIGNAL_POWER_DB = 10 * np.log10(signal_power)
+    signal_dc_power = np.sum(pspectrum["power"].iloc[0 : 0 + span].values)
+    DC_POWER_DB = 10 * np.log10(signal_dc_power)
     # ********************************************
     # Computing SFDR - Spurious Free Dynamic Range
-    #  - Obtain the power of the 
-    #       strongest spurious component 
-    #       of the spectrum (excluding the 
+    #  - Obtain the power of the
+    #       strongest spurious component
+    #       of the spectrum (excluding the
     #       DC component) and compute the SFDR.
     # ********************************************
-    signal_bin_idx = harmonic_bins_idxs[0] # get the index of the signal bin
+    signal_bin_idx = harmonic_bins_idxs[0]  # get the index of the signal bin
     spurious_spectrum = pspectrum["power"].copy()
     # erase the signal bin from the spurious spectrum
-    spurious_spectrum.iloc[signal_bin_idx-span:signal_bin_idx+span] = np.min(pspectrum["power"])
+    spurious_spectrum.iloc[signal_bin_idx - span : signal_bin_idx + span] = np.min(
+        pspectrum["power"]
+    )
     # erase the signal's DC component from the spurious spectrum
-    spurious_spectrum.iloc[0:0+span] = np.min(pspectrum["power"])
+    spurious_spectrum.iloc[0 : 0 + span] = np.min(pspectrum["power"])
     # find the strongest spurious component
     spur_bin = spurious_spectrum.idxmax()
     spur_bin_idx = pspectrum.index.get_loc(spur_bin)
     # measure the power of the strongest spurious component
-    spur_power = np.sum(spurious_spectrum.iloc[spur_bin_idx-span:spur_bin_idx+span].values)
+    spur_power = np.sum(
+        spurious_spectrum.iloc[spur_bin_idx - span : spur_bin_idx + span].values
+    )
     # compute the SFDR
-    SFDR = 10*np.log10(signal_power/spur_power)
+    SFDR = 10 * np.log10(signal_power / spur_power)
     # ********************************************
     # Computing THD - Total Harmonic Distortion
     #  - Obtain the power of each harmonic component
     # ********************************************
     # compute the total power of the sum of the harmonics
     total_distortion_power = np.sum(harmonics_power[1:])
-    THD = 10*np.log10(total_distortion_power/harmonics_power[0])
+    THD = 10 * np.log10(total_distortion_power / harmonics_power[0])
     # ********************************************
     # Computing SNR - Signal to Noise Ratio
     #  - Obtain the noise power in the spectrum
     # ********************************************
-    noise_power = np.sum(pspectrum["power"].values) - signal_dc_power - signal_power - total_distortion_power
-    SNR = 10*np.log10(signal_power/noise_power)
+    noise_power = (
+        np.sum(pspectrum["power"].values)
+        - signal_dc_power
+        - signal_power
+        - total_distortion_power
+    )
+    SNR = 10 * np.log10(signal_power / noise_power)
     # ********************************************
     # Computing SNDR - Signal to Noise & Distortion Ratio
-    #  - Add the noise and distortion power in 
+    #  - Add the noise and distortion power in
     #     the spectrum and compare them to the
     #     signal power
     # ********************************************
-    SNDR = 10*np.log10(signal_power/(noise_power + total_distortion_power))
+    SNDR = 10 * np.log10(signal_power / (noise_power + total_distortion_power))
     # ********************************************
     # Computing ENOB - Effective Number of Bits
-    #  - Check deterioration of the ADC's 
+    #  - Check deterioration of the ADC's
     #    ideal resolution because of the SNDR
     # ********************************************
-    ENOB = (SNDR - 1.76)/6.02    
+    ENOB = (SNDR - 1.76) / 6.02
     return spectrum, SIGNAL_POWER_DB, DC_POWER_DB, SFDR, THD, SNR, SNDR, ENOB
+
 
 def dacDynamicEval(subparser, *args, **kwargs):
     """_summary_
     Dynamic performance evaluation of Digital-to-Analog Converter circuits
     """
     raise NotImplementedError("dacDynamicEval: Not implemented yet.")
+
 
 def sigmaDeltaAdcDynamicEval(*args, **kwargs):
     """_summary_
@@ -288,5 +346,3 @@ def sigmaDeltaAdcDynamicEval(*args, **kwargs):
         NotImplementedError: _description_
     """
     raise NotImplementedError("sigmaDeltaAdcDynamicEval: Not implemented yet")
-
-

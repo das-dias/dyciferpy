@@ -1,6 +1,6 @@
 import os
 import traceback as tb
-from modelling_utils import(
+from modelling_utils import (
     Scale,
     Units,
     stof,
@@ -9,7 +9,9 @@ from pandas import (
     read_csv,
     DataFrame,
 )
-def readSignals(file_path:str=None) -> DataFrame:
+
+
+def readSignals(file_path: str = None) -> DataFrame:
     """_summary_
     Reads a time series table data into a pandas DataFrame and returns it.
     Args:
@@ -37,9 +39,15 @@ def readSignals(file_path:str=None) -> DataFrame:
     for column in list(signals.columns):
         tokens = column.split(" ")
         for token in tokens:
-            if token in possible_time_cols + [Units.TIME.value, f"[{Units.TIME.value}]", f"({Units.TIME.value})"]:
+            if token in possible_time_cols + [
+                Units.TIME.value,
+                f"[{Units.TIME.value}]",
+                f"({Units.TIME.value})",
+            ]:
                 # place the time column in the first column of the DataFrame
-                signals_columns_order = [column] + list(signals.drop(columns = [column]).columns)
+                signals_columns_order = [column] + list(
+                    signals.drop(columns=[column]).columns
+                )
                 ordered = True
                 break
         if ordered:
