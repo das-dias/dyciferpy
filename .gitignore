@@ -1,5 +1,5 @@
-resources/tables_jonny
 dist/*
+dist
 src/dycifer/__pycache__/*
 .vscode/
 export-requirements.sh
