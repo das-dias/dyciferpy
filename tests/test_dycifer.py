@@ -255,15 +255,15 @@ class TestDycifer(unittest.TestCase):
             **kwargs
         )
         """
-        self.assertAlmostEqual(signal_power, -5.987259500627048)
-        self.assertAlmostEqual(dc_power, -6.920592008427765)
-        self.assertAlmostEqual(gain, 1003.8458331687908)
-        self.assertAlmostEqual(sfdr, 19.514957781276006)
-        self.assertAlmostEqual(thd, -19.488729725548698)
-        self.assertAlmostEqual(snr, 26.2454720617147)
-        self.assertAlmostEqual(sndr, 18.65721282743459)
-        self.assertAlmostEqual(hd2, -19.514957781276006)
-        self.assertAlmostEqual(hd3, -41.69201928902894)
+        self.assertAlmostEqual(signal_power, -5.987259500627048, places=2)
+        self.assertAlmostEqual(dc_power, -6.920592008427765, places=2)
+        self.assertAlmostEqual(gain, 1003.8458331687908, places=2)
+        self.assertAlmostEqual(sfdr, 19.514957781276006, places=2)
+        self.assertAlmostEqual(thd, -19.488729725548698, places=2)
+        self.assertAlmostEqual(snr, 26.2454720617147, places=2)
+        self.assertAlmostEqual(sndr, 18.65721282743459, places=2)
+        self.assertAlmostEqual(hd2, -19.514957781276006, places=2)
+        self.assertAlmostEqual(hd3, -41.69201928902894, places=2)
 
 
 if __name__ == "__main__":
