@@ -16,25 +16,6 @@ def getParent(path, levels=0):
     return common
 
 
-def mapSubparserToFun(func, subparser):
-    from functools import wraps
-
-    """_summary_
-    Maps subparser to callback function
-    Args:
-        func (Function): callback function
-        subparser (_type_): subparser object
-    Returns:
-        result (_type_): result of the callback function
-    """
-
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        return func(subparser, *args, **kwargs)
-
-    return wrapper
-
-
 def plotPrettyFFT(
     freq,
     power,
@@ -44,6 +25,8 @@ def plotPrettyFFT(
     file_path: str = None,
     xlog: bool = False,
     show: bool = False,
+    *args,
+    **kwargs,
 ):
     """_summary_
     Plot a pretty FFT plot
@@ -56,6 +39,13 @@ def plotPrettyFFT(
         file_path (str) : path to save the plot
         xlog (bool)     : log scale
         show (bool)     : show the plot
+    NOTE:
+        kwargs example:
+        kwargs = {
+            "linefmt":"b-",
+            "markerfmt":"bD",
+            "basefmt":"r-",
+        }
     """
     import matplotlib.pyplot as plt
     from matplotlib import rcParams
@@ -71,9 +61,7 @@ def plotPrettyFFT(
     # define font family to use for all text
     rcParams["font.family"] = "serif"
     # plt.figure(figsize=(8,6))
-    markerline, stemlines, baseline = plt.stem(
-        freq, power, bottom=min(power), linefmt="b-", markerfmt="bD", basefmt="k-."
-    )
+    markerline, stemlines, baseline = plt.stem(freq, power, bottom=min(power), **kwargs)
     markerline.set_markerfacecolor("none")
     # highlight the spectral signal components
     signal_freq = freq[where(power == max(power[1:]))]  # don't count the dc component

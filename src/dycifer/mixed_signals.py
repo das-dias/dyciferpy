@@ -1,3 +1,4 @@
+from curses.panel import bottom_panel
 import os
 import pdb
 from loguru import logger as log
@@ -10,6 +11,9 @@ from modelling_utils import stof, timer
 
 
 def mixedSignalsDynamicEval(subparser, *args, **kwargs):
+    import warnings
+
+    warnings.filterwarnings("ignore")  # supress pandas warnings
     """_summary_
     Dynamic performance evaluation of Mixed Signals circuits
     """
@@ -34,6 +38,7 @@ def mixedSignalsDynamicEval(subparser, *args, **kwargs):
         v_source = argv.voltage_source[0] if bool(argv.voltage_source) else 1.0
         harmonics = argv.harmonics[0] if bool(argv.harmonics) else 7
         signal_span = argv.signal_span[0] if bool(argv.signal_span) else 0.0
+        noise_power = argv.noise_power[0] if bool(argv.noise_power) else -1.0
         # pdb.set_trace()
         # perform dynamic performance evaluation
         spectrum, signal_power, dc_power, sfdr, thd, snr, sndr, enob = adcDynamicEval(
@@ -45,6 +50,7 @@ def mixedSignalsDynamicEval(subparser, *args, **kwargs):
             harmonics=harmonics,
             signal_span_factor=signal_span,
             asceding_bit_order=argv.ascending,
+            noise_power=noise_power,
         )
         # prepare to plot resulting information
         dynamic_eval_indicators = DataFrame(
@@ -59,6 +65,11 @@ def mixedSignalsDynamicEval(subparser, *args, **kwargs):
             },
             index=["Dynamic Evaluation Indicators"],
         )
+        fft_kwargs = {
+            "linefmt": "b-",
+            "markerfmt": "bD",
+            "basefmt": "r-",
+        }
         if argv.plot:
             plotPrettyFFT(
                 spectrum[
@@ -70,6 +81,7 @@ def mixedSignalsDynamicEval(subparser, *args, **kwargs):
                 ylabel="Power (dB)",
                 show=True,
                 xlog=False,
+                **fft_kwargs,
             )
         if bool(argv.output_dir):
             plotPrettyFFT(
@@ -82,6 +94,7 @@ def mixedSignalsDynamicEval(subparser, *args, **kwargs):
                 ylabel="Power (dB)",
                 show=False,
                 file_path=os.path.join(argv.output_dir[0], "signal_spectrum.png"),
+                **fft_kwargs,
             )
             if argv.generate_table:
                 tablename = argv.output_dir[0]
@@ -110,6 +123,7 @@ def mixedSignalsDynamicEval(subparser, *args, **kwargs):
         raise ValueError(
             "No mixed-signals system class was specified was specified. Missing --analog-to-digital, --digital-to-analog, --sigma-delta-adc or --sigma-delta-dac."
         )
+    print("\nPerformance evaluation finished.")
     return
 
 
@@ -123,7 +137,9 @@ def adcDynamicEval(
     harmonics: int = 7,
     signal_span_factor: float = 0.0,
     asceding_bit_order: bool = False,
+    noise_power: float = -1.0,
 ) -> tuple[DataFrame, float, float, float, float, float, float, float]:
+    print("\nPerforming Dynamic performance evaluation of ADC...")
     """_summary_
     Dynamic performance evaluation of Analog-to-Digital Converter circuits
     Args:
@@ -140,6 +156,7 @@ def adcDynamicEval(
                                                 power is dispersed onto the remanescent spectrum of the signal's spectrum. Defaults to 0.0
         ascending_bit_order (bool, optional): When parsing bit signals (and not output word), indicate if the columns of each bit (in the signals dataframe)
                                                 are in ascending or descending order. Defaults to False.
+        noise_power (float, optional):Artificially added noise power (in dBm) to the signal. Defaults to -1.0
     Returns:
         tuple(DataFrame, float(1), float(2), float(3), float(4), float(5), float(6), float(7)):
             DataFrame: The frequency spectrum of the ADC's output signal in volt, volt squared (power) and decibels.
@@ -151,6 +168,7 @@ def adcDynamicEval(
             float(6): Signal to Noise & Distortion Ratio metric
             float(7): Effective Number of Bits (effective ADC resolution) metric
     """
+
     # extract the sampling frequency from the function inputs
     ts = 1.0 / f_sampling
     fs = f_sampling
@@ -161,11 +179,10 @@ def adcDynamicEval(
             )
             if step_points < 1:
                 raise ValueError(
-                    "Sampling frequency must be equal or lower than the signals' time resolution."
+                    "Sampling time period must be equal or higher than the signals' time resolution."
                 )
             # downsample the signals to the sampling frequency effectively parsed as input
             signals = signals[::step_points]
-
     """
     * ***********************************************************************************
     * * If the resolution of the ADC was parsed as input, it is assumed that the signals
@@ -211,6 +228,11 @@ def adcDynamicEval(
     else:
         dout["vout"] = dout[dout.columns] / (2**resolution - 1) * 2 - 1.0
         dout["vout"] = dout["vout"] * v_source
+    if noise_power > 0:
+        noise_watt = (10 ** (noise_power / 10)) * 1e-3
+        dout["vout"] = dout["vout"] + np.random.normal(
+            0, np.sqrt(noise_watt), size=len(dout)
+        )
     dout = dout["vout"]
     """
     * ***********************************************************************************
@@ -340,6 +362,15 @@ def dacDynamicEval(subparser, *args, **kwargs):
 
 
 def sigmaDeltaAdcDynamicEval(*args, **kwargs):
+    """_summary_
+    Dynamic evaluation of Sigma Delta Analog-to-Digital Converter circuits
+    Raises:
+        NotImplementedError: _description_
+    """
+    raise NotImplementedError("sigmaDeltaAdcDynamicEval: Not implemented yet")
+
+
+def sigmaDeltaDacDynamicEval(*args, **kwargs):
     """_summary_
     Dynamic evaluation of Sigma Delta Analog-to-Digital Converter circuits
     Raises:

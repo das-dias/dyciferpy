@@ -1,0 +1,13 @@
+-adc
+-s
+./resources/data/fft_points_c2c_256_bin7.csv
+-fs
+1 G
+-p
+-o
+./resources/tables_jonny
+-gt
+-nh
+6
+-np
+0.01
