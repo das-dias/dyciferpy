@@ -247,21 +247,23 @@ class TestDycifer(unittest.TestCase):
             "markerfmt": "bD",
             "basefmt": "k-",
         }
+        """
         plotPrettyFFT(
             out_spectrum.index[out_spectrum.index >= 0],
             out_spectrum["power_db"][out_spectrum.index >= 0],
             show=True,
             **kwargs
         )
-        print("Output Signal power: ", signal_power)
-        print("Output DC power: ", dc_power)
-        print("Gain (_, dB):", (gain, gain_db))
-        print("Output SFDR: ", sfdr)
-        print("Output THD: ", thd)
-        print("Output SNR: ", snr)
-        print("Output SNDR: ", sndr)
-        print("Output HD2: ", hd2)
-        print("Output HD3: ", hd3)
+        """
+        self.assertEqual(signal_power, -5.987259500627048)
+        self.assertEqual(dc_power, -6.920592008427765)
+        self.assertEqual(gain, 1003.8458331687908)
+        self.assertEqual(sfdr, 19.514957781276006)
+        self.assertEqual(thd, -19.488729725548698)
+        self.assertEqual(snr, 26.2454720617147)
+        self.assertEqual(sndr, 18.65721282743459)
+        self.assertEqual(hd2, -19.514957781276006)
+        self.assertEqual(hd3, -41.69201928902894)
 
 
 if __name__ == "__main__":
