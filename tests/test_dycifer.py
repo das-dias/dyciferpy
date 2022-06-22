@@ -237,7 +237,7 @@ class TestDycifer(unittest.TestCase):
             "vin",
             "vout",
             signal_span_factor=0.002,
-            noise_power=1,
+            noise_power=0.01,
             downsampling=5,
         )  # 0.2 % of power spectral density leakage
         self.assertIsNotNone(out_spectrum)
