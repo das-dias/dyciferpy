@@ -237,7 +237,7 @@ class TestDycifer(unittest.TestCase):
             "vin",
             "vout",
             signal_span_factor=0.002,
-            noise_power=0.01,
+            noise_power=0.0,
             downsampling=5,
         )  # 0.2 % of power spectral density leakage
         self.assertIsNotNone(out_spectrum)
@@ -255,15 +255,15 @@ class TestDycifer(unittest.TestCase):
             **kwargs
         )
         """
-        self.assertAlmostEqual(signal_power, -5.987259500627048, places=2)
-        self.assertAlmostEqual(dc_power, -6.920592008427765, places=2)
-        self.assertAlmostEqual(gain, 1003.8458331687908, places=2)
-        self.assertAlmostEqual(sfdr, 19.514957781276006, places=2)
-        self.assertAlmostEqual(thd, -19.488729725548698, places=2)
-        self.assertAlmostEqual(snr, 26.2454720617147, places=2)
-        self.assertAlmostEqual(sndr, 18.65721282743459, places=2)
-        self.assertAlmostEqual(hd2, -19.514957781276006, places=2)
-        self.assertAlmostEqual(hd3, -41.69201928902894, places=2)
+        self.assertAlmostEqual(signal_power, -6.020599913279618, places=3)
+        self.assertAlmostEqual(dc_power, -6.935749724493102, places=3)
+        self.assertAlmostEqual(gain, 999.9999999999966, places=3)
+        self.assertAlmostEqual(sfdr, 20.000000000000103, places=3)
+        self.assertAlmostEqual(thd, -19.95678626217368, places=3)
+        self.assertAlmostEqual(snr, 156.36918103207805, places=3)
+        self.assertAlmostEqual(sndr, 19.95678626217358, places=3)
+        self.assertAlmostEqual(hd2, -20.000000000000103, places=3)
+        self.assertAlmostEqual(hd3, -40.00000000000053, places=3)
 
 
 if __name__ == "__main__":
