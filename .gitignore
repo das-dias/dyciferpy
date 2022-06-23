@@ -4,3 +4,5 @@ src/dycifer/__pycache__/*
 .vscode/
 export-requirements.sh
 black-format.sh
+gen-pipfile.sh
+md2rst_html-script.sh
