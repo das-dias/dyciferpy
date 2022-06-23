@@ -191,7 +191,7 @@ class TestDycifer(unittest.TestCase):
         with self.assertRaises(SystemExit):
             cli(args)
 
-    def test_caosDynamicEval_plotPrettyFFT_multiple(self):
+    def test_caosDynamicEval(self):
         # create the test data
         fs = 10e9  # sampling frequency
         ts = 1.0 / fs  # sampling time stamp / period
@@ -236,7 +236,7 @@ class TestDycifer(unittest.TestCase):
             signals,
             "vout",
             input_signal_name="vin",
-            signal_span_factor=0.002,
+            signal_span_factor=0.00,
             noise_power=0.0,
             downsampling=5,
         )  # 0.2 % of power spectral density leakage
@@ -265,12 +265,10 @@ class TestDycifer(unittest.TestCase):
         self.assertAlmostEqual(hd2, -20.000000000000103, places=3)
         self.assertAlmostEqual(hd3, -40.00000000000053, places=3)
 
-    def test_daosDynamicEval_plotPrettyFFT_multiple(self):
+    def test_daosDynamicEval(self):
 
         file_path = "./resources/data/fft_points_c2c_256_bin7.csv"
         signals = readSignals(file_path)
-        plt.plot(signals.index, signals["bit0_sampled (V)"])
-        plt.show()
         (
             out_spectrum,
             signal_power,
