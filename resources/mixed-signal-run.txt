@@ -1,13 +1,13 @@
 -adc
 -s
-./resources/data/fft_points_c2c_256_bin7.csv
+./resources/data/fft_points_c2c_256_x2_bin11_noise.csv
 -fs
 1 G
 -p
 -o
-./resources/tables_jonny
+./resources/tables_jonny/test_dycifer_cli_mixed_signals_adcDynamicEval_textfile_parsing
 -gt
 -nh
-6
--np
-0.01
+5
+-ss
+0.03

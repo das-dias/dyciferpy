@@ -109,7 +109,19 @@ class TestDycifer(unittest.TestCase):
         signals = DataFrame({"time [s]": t, "dout": dout}).set_index("time [s]")
         file_path = "./resources/data/test_signals2.csv"
         signals.to_csv(file_path, index=False)
-        spectrum, signal_power, dc_power, sfdr, thd, snr, sndr, enob = adcDynamicEval(
+        (
+            spectrum,
+            target_harmonics,
+            signal_power,
+            dc_power,
+            sfdr,
+            thd,
+            snr,
+            sndr,
+            enob,
+            hd2,
+            hd3,
+        ) = adcDynamicEval(
             signals, fs / 5, n_bits=res, signal_span_factor=0.002
         )  # 0.2 % of power spectral density leakage
         self.assertIsNotNone(spectrum)
@@ -156,7 +168,7 @@ class TestDycifer(unittest.TestCase):
             "6",
             "-gt",
             "-o",
-            "./resources/tables",
+            "./resources/tables/test_mixed_signals_adcDynamicEval",
             # "-p",
         ]
         with self.assertRaises(SystemExit):
@@ -171,13 +183,13 @@ class TestDycifer(unittest.TestCase):
             "mixedsignals",
             "-adc",
             "-s",
-            "./resources/data/fft_points_c2c_256_bin7.csv",
+            "./resources/data/fft_points_c2c_256_x2_bin11_noise.csv",
             "-fs",
             "1 G",
             "-gt",
             "-o",
-            "./resources/tables_jonny",
-            # "-p",
+            "./resources/tables_jonny/mixed_signals_adcDynamicEval_cadence_data",
+            "-p",
         ]
         with self.assertRaises(SystemExit):
             cli(args)
@@ -219,9 +231,10 @@ class TestDycifer(unittest.TestCase):
             "time [s]"
         )
         file_path = "./resources/data/test_signals3.csv"
-        signals.to_csv(file_path, index=False)
+        signals.reset_index().to_csv(file_path)
         (
             out_spectrum,
+            target_harmonics,
             signal_power,
             dc_power,
             gain,
@@ -242,11 +255,6 @@ class TestDycifer(unittest.TestCase):
         )  # 0.2 % of power spectral density leakage
         self.assertIsNotNone(out_spectrum)
         self.assertEqual(DataFrame, type(out_spectrum))
-        kwargs = {
-            "linefmt": "b-",
-            "markerfmt": "bD",
-            "basefmt": "k-",
-        }
         """
         plotPrettyFFT(
             out_spectrum.index[out_spectrum.index >= 0],
@@ -271,6 +279,7 @@ class TestDycifer(unittest.TestCase):
         signals = readSignals(file_path)
         (
             out_spectrum,
+            target_harmonics,
             signal_power,
             dc_power,
             gain,
@@ -294,11 +303,6 @@ class TestDycifer(unittest.TestCase):
         )  # 0.2 % of power spectral density leakage
         self.assertIsNotNone(out_spectrum)
         self.assertEqual(DataFrame, type(out_spectrum))
-        kwargs = {
-            "linefmt": "b-",
-            "markerfmt": "bD",
-            "basefmt": "k-",
-        }
         """
         plotPrettyFFT(
             out_spectrum.index[out_spectrum.index >= 0],
@@ -312,6 +316,48 @@ class TestDycifer(unittest.TestCase):
         self.assertAlmostEqual(dc_power, -8.791215150649549, places=3)
         self.assertEqual(type(gain), type(np.nan))
         self.assertAlmostEqual(rise_time_90, 3.199360000000003e-09)
+
+    def test_dycifer_cli_analog_caosDynamicEval_cadence_data(self):
+        """_summary_
+        Testing the mixed-signals CLI to evaluate the ADC dynamic performance
+        with signals provenient directly from Cadence.
+        """
+        args = [
+            "analog",
+            "-caos",
+            "-s",
+            "./resources/data/test_signals3.csv",
+            "-os",
+            "vout",
+            "-gt",
+            "-o",
+            "./resources/tables_jonny/test_dycifer_cli_analog_caosDynamicEval_cadence_data",
+            # "-p",
+        ]
+        with self.assertRaises(SystemExit):
+            cli(args)
+
+    def test_dycifer_cli_analog_daosDynamicEval_cadence_data(self):
+        """_summary_
+        Testing the mixed-signals CLI to evaluate the ADC dynamic performance
+        with signals provenient directly from Cadence.
+        """
+        args = [
+            "analog",
+            "-daos",
+            "-s",
+            "./resources/data/fft_points_c2c_256_x2_bin11_noise.csv",
+            "-os",
+            "bit0_2_sampled (V)",
+            "-wf",
+            "pulse",
+            "-gt",
+            "-o",
+            "./resources/tables_jonny/",
+            # "-p",
+        ]
+        with self.assertRaises(SystemExit):
+            cli(args)
 
 
 if __name__ == "__main__":

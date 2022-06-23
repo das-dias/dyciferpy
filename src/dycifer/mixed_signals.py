@@ -1,3 +1,4 @@
+from curses import use_default_colors
 from curses.panel import bottom_panel
 import os
 import pdb
@@ -41,7 +42,19 @@ def mixedSignalsDynamicEval(subparser, *args, **kwargs):
         noise_power = argv.noise_power[0] if bool(argv.noise_power) else -1.0
         # pdb.set_trace()
         # perform dynamic performance evaluation
-        spectrum, signal_power, dc_power, sfdr, thd, snr, sndr, enob = adcDynamicEval(
+        (
+            spectrum,
+            target_harmonics,
+            signal_power,
+            dc_power,
+            sfdr,
+            thd,
+            snr,
+            sndr,
+            enob,
+            hd2,
+            hd3,
+        ) = adcDynamicEval(
             signals,
             sampling_freq,
             time_col=time_col,
@@ -62,14 +75,11 @@ def mixedSignalsDynamicEval(subparser, *args, **kwargs):
                 "SNR (dB)": snr,
                 "SNDR (dB)": sndr,
                 "ENOB": enob,
+                "HD2 (dB)": hd2,
+                "HD3 (dB)": hd3,
             },
             index=["Dynamic Evaluation Indicators"],
         )
-        fft_kwargs = {
-            "linefmt": "b-",
-            "markerfmt": "bD",
-            "basefmt": "r-",
-        }
         if argv.plot:
             plotPrettyFFT(
                 spectrum[
@@ -80,10 +90,9 @@ def mixedSignalsDynamicEval(subparser, *args, **kwargs):
                 xlabel="Frequency (Hz)",
                 ylabel="Power (dB)",
                 show=True,
-                xlog=False,
-                **fft_kwargs,
+                target_harmonics=target_harmonics,
             )
-        if bool(argv.output_dir):
+        if bool(argv.output_file):
             plotPrettyFFT(
                 spectrum[
                     spectrum.index >= 0
@@ -93,23 +102,15 @@ def mixedSignalsDynamicEval(subparser, *args, **kwargs):
                 xlabel="Frequency (Hz)",
                 ylabel="Power (dB)",
                 show=False,
-                file_path=os.path.join(argv.output_dir[0], "signal_spectrum.png"),
-                **fft_kwargs,
+                file_path=argv.output_file[0] + ".png",
+                target_harmonics=target_harmonics,
             )
             if argv.generate_table:
-                tablename = argv.output_dir[0]
-                dynamic_eval_indicators.to_csv(
-                    os.path.join(tablename, "adc_spectrum.csv")
-                )
-                dynamic_eval_indicators.to_json(
-                    os.path.join(tablename, "adc_spectrum.json")
-                )
-                dynamic_eval_indicators.to_markdown(
-                    os.path.join(tablename, "adc_spectrum.md")
-                )
-                dynamic_eval_indicators.to_latex(
-                    os.path.join(tablename, "adc_spectrum.tex")
-                )
+                tablename = argv.output_file[0]
+                dynamic_eval_indicators.to_csv(tablename + ".csv")
+                dynamic_eval_indicators.to_json(tablename + ".json")
+                dynamic_eval_indicators.to_markdown(tablename + ".md")
+                dynamic_eval_indicators.to_latex(tablename + ".tex")
         # print indicators to console
         print()
         print(dynamic_eval_indicators.T)
@@ -273,12 +274,23 @@ def adcDynamicEval(
     ].idxmax()  # don't count DC signal when searching for the signal bin
     # obtain the harmonics of the signal from the signal bin
     harmonic_bins = [
-        mult * signal_bin
+        pspectrum.index[
+            np.abs(pspectrum.index - (mult * signal_bin))
+            == np.min(np.abs(pspectrum.index - (mult * signal_bin)))
+        ][0]
         for mult in range(1, harmonics + 1)
         if mult * signal_bin <= np.max(freq)
     ]
     # tones that surpass Fs are aliased back to [0, Fs/2] spectrum
-    harmonic_bins = [fs - bin if bin > fs / 2 else bin for bin in harmonic_bins]
+    harmonic_bins = [
+        pspectrum.index[
+            np.abs(pspectrum.index - (fs - bin))
+            == np.min(np.abs(pspectrum.index - (fs - bin)))
+        ]
+        if bin > fs / 2
+        else bin
+        for bin in harmonic_bins
+    ]
     # indexes of the harmonic bins
     harmonic_bins_idxs = [pspectrum.index.get_loc(bin) for bin in harmonic_bins]
     harmonics_power = np.array(
@@ -351,7 +363,27 @@ def adcDynamicEval(
     #    ideal resolution because of the SNDR
     # ********************************************
     ENOB = (SNDR - 1.76) / 6.02
-    return spectrum, SIGNAL_POWER_DB, DC_POWER_DB, SFDR, THD, SNR, SNDR, ENOB
+    # ********************************************
+    # Computing HD2 and HD3 - Fractional Harmonic
+    # Distortion of Second and Third order
+    # harmonics
+    # ********************************************
+    HD2 = 10 * np.log10(harmonics_power[1] / harmonics_power[0])
+    HD3 = 10 * np.log10(harmonics_power[2] / harmonics_power[0])
+    target_harmonics = list(zip(harmonic_bins, 10 * np.log10(harmonics_power)))
+    return (
+        spectrum,
+        target_harmonics,
+        SIGNAL_POWER_DB,
+        DC_POWER_DB,
+        SFDR,
+        THD,
+        SNR,
+        SNDR,
+        ENOB,
+        HD2,
+        HD3,
+    )
 
 
 def dacDynamicEval(subparser, *args, **kwargs):

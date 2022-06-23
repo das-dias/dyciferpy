@@ -30,7 +30,7 @@ def analogDynamicEval(subparser, *args, **kwargs):
     # extract the signals
     signals = readSignals(argv.signals[0])
     if argv.continuous_aos:
-        input_signal = argv.input_signal[0]
+        input_signal = argv.input_signal[0] if bool(argv.input_signal) else None
         output_signal = argv.output_signal[0]
         harmonics = argv.harmonics[0] if bool(argv.harmonics) else 7
         signal_span = argv.signal_span[0] if bool(argv.signal_span) else 0.0
@@ -39,6 +39,7 @@ def analogDynamicEval(subparser, *args, **kwargs):
         # perform dynamic performance evaluation
         (
             spectrum,
+            target_harmonics,
             signal_power,
             dc_power,
             gain,
@@ -51,8 +52,8 @@ def analogDynamicEval(subparser, *args, **kwargs):
             hd3,
         ) = caosDynamicEval(
             signals,
-            input_signal,
             output_signal,
+            input_signal_name=input_signal,
             harmonics=harmonics,
             signal_span_factor=signal_span,
             noise_power=noise_power,
@@ -84,8 +85,9 @@ def analogDynamicEval(subparser, *args, **kwargs):
                 ylabel="Power (dB)",
                 show=True,
                 xlog=False,
+                target_harmonics=target_harmonics,
             )
-        if bool(argv.output_dir):
+        if bool(argv.output_file):
             plotPrettyFFT(
                 spectrum[
                     spectrum.index >= 0
@@ -95,32 +97,108 @@ def analogDynamicEval(subparser, *args, **kwargs):
                 xlabel="Frequency (Hz)",
                 ylabel="Power (dB)",
                 show=False,
-                file_path=os.path.join(argv.output_dir[0], "caos_spectrum.png"),
+                file_path=argv.output_file[0] + ".png",
+                target_harmonics=target_harmonics,
             )
             if argv.generate_table:
-                tablename = argv.output_dir[0]
-                dynamic_eval_indicators.to_csv(
-                    os.path.join(tablename, "caos_spectrum.csv")
-                )
-                dynamic_eval_indicators.to_json(
-                    os.path.join(tablename, "caos_spectrum.json")
-                )
-                dynamic_eval_indicators.to_markdown(
-                    os.path.join(tablename, "caos_spectrum.md")
-                )
-                dynamic_eval_indicators.to_latex(
-                    os.path.join(tablename, "caos_spectrum.tex")
-                )
+                tablename = argv.output_file[0]
+                dynamic_eval_indicators.to_csv(tablename + ".csv")
+                dynamic_eval_indicators.to_json(tablename + ".json")
+                dynamic_eval_indicators.to_markdown(tablename + ".md")
+                dynamic_eval_indicators.to_latex(tablename + ".tex")
         # print indicators to console
         print()
         print(dynamic_eval_indicators.T)
     elif bool(argv.discrete_aos):
-        raise NotImplementedError(
-            "Digital Amplitude Output (Analog) System evaluation: Not implemented yet."
+        wave_type = argv.waveform[0] if bool(argv.waveform) else "default"
+        upper_level = argv.risetime_level[0] if bool(argv.risetime_level) else 0.9
+        input_signal = argv.input_signal[0] if bool(argv.input_signal) else None
+        output_signal = argv.output_signal[0]
+        harmonics = argv.harmonics[0] if bool(argv.harmonics) else 7
+        signal_span = argv.signal_span[0] if bool(argv.signal_span) else 0.0
+        noise_power = argv.noise_power[0] if bool(argv.noise_power) else -1.0
+        (
+            spectrum,
+            target_harmonics,
+            signal_power,
+            dc_power,
+            gain,
+            gain_db,
+            sfdr,
+            thd,
+            snr,
+            sndr,
+            hd2,
+            hd3,
+            rise_time,
+            bandwidth,
+        ) = daosDynamicEval(
+            signals,
+            output_signal,
+            input_signal_name=input_signal,
+            harmonics=harmonics,
+            signal_span_factor=signal_span,
+            noise_power=noise_power,
+            levels=(0.1, upper_level),
+            wave_type=wave_type,
+            show_rise_time_eval=argv.plot,
         )
+        # prepare to plot resulting information
+        dynamic_eval_indicators = DataFrame(
+            data={
+                "Output Signal Power (dB)": signal_power,
+                "Output DC Power (dB)": dc_power,
+                "Gain (out/in)": gain,
+                "Gain (dB)": gain_db,
+                "SFDR (dB)": sfdr,
+                "THD (dB)": thd,
+                "SNR (dB)": snr,
+                "SNDR (dB)": sndr,
+                "HD2": hd2,
+                "HD3": hd3,
+                f"Rise Time[{100*upper_level}%] (ns)": rise_time / 1e-9,
+                "Bandwidth (GHz)": bandwidth / 1e9,
+            },
+            index=["Dynamic Evaluation Indicators"],
+        )
+        if argv.plot:
+            plotPrettyFFT(
+                spectrum[
+                    spectrum.index.values >= 0
+                ].index,  # plot only positive frequencies spectrum
+                spectrum[spectrum.index.values >= 0]["power_db"],
+                title="Signal Spectrum (dB)",
+                xlabel="Frequency (Hz)",
+                ylabel="Power (dB)",
+                show=True,
+                xlog=False,
+                target_harmonics=target_harmonics,
+            )
+        if bool(argv.output_file):
+            plotPrettyFFT(
+                spectrum[
+                    spectrum.index >= 0
+                ].index,  # plot only positive frequencies spectrum
+                spectrum[spectrum.index.values >= 0]["power_db"],
+                title="Signal Spectrum (dB)",
+                xlabel="Frequency (Hz)",
+                ylabel="Power (dB)",
+                show=False,
+                file_path=argv.output_file[0] + ".png",
+                target_harmonics=target_harmonics,
+            )
+            if argv.generate_table:
+                tablename = argv.output_file[0]
+                dynamic_eval_indicators.to_csv(os.path.join(tablename, ".csv"))
+                dynamic_eval_indicators.to_json(os.path.join(tablename, ".json"))
+                dynamic_eval_indicators.to_markdown(os.path.join(tablename, ".md"))
+                dynamic_eval_indicators.to_latex(os.path.join(tablename, ".tex"))
+        # print indicators to console
+        print()
+        print(dynamic_eval_indicators.T)
     else:
         raise ValueError(
-            "No mixed-signals system class was specified was specified. Missing --analog-to-digital, --digital-to-analog, --sigma-delta-adc or --sigma-delta-dac."
+            "No analog system class was specified was specified. Missing: --caos or --daos"
         )
     print("\nPerformance evaluation finished.")
     return
@@ -198,12 +276,23 @@ def caosDynamicEval(
     ].idxmax()  # don't count DC signal when searching for the signal bin
     # obtain the harmonics of the signal from the signal bin
     harmonic_bins = [
-        mult * signal_bin
+        pspectrum.index[
+            np.abs(pspectrum.index - (mult * signal_bin))
+            == np.min(np.abs(pspectrum.index - (mult * signal_bin)))
+        ][0]
         for mult in range(1, harmonics + 1)
         if mult * signal_bin <= np.max(freq)
     ]
     # tones that surpass Fs are aliased back to [0, Fs/2] spectrum
-    harmonic_bins = [fs - bin if bin > fs / 2 else bin for bin in harmonic_bins]
+    harmonic_bins = [
+        pspectrum.index[
+            np.abs(pspectrum.index - (fs - bin))
+            == np.min(np.abs(pspectrum.index - (fs - bin)))
+        ]
+        if bin > fs / 2
+        else bin
+        for bin in harmonic_bins
+    ]
     # indexes of the harmonic bins
     harmonic_bins_idxs = [
         pspectrum.index.get_loc(bin) for bin in harmonic_bins if bin in pspectrum.index
@@ -330,8 +419,10 @@ def caosDynamicEval(
         )
         GAIN = np.sqrt(signal_power / input_signal_power)
         GAIN_DB = 10 * np.log10(GAIN)
+    target_harmonics = list(zip(harmonic_bins, 10 * np.log10(harmonics_power)))
     return (
         spectrum,
+        target_harmonics,
         SIGNAL_POWER_DB,
         DC_POWER_DB,
         GAIN,
@@ -384,6 +475,7 @@ def daosDynamicEval(
         legend,
         arrow,
         rc,
+        clf,
     )
 
     """_summary_
@@ -453,12 +545,23 @@ def daosDynamicEval(
     ].idxmax()  # don't count DC signal when searching for the signal bin
     # obtain the harmonics of the signal from the signal bin
     harmonic_bins = [
-        mult * signal_bin
+        pspectrum.index[
+            np.abs(pspectrum.index - (mult * signal_bin))
+            == np.min(np.abs(pspectrum.index - (mult * signal_bin)))
+        ][0]
         for mult in range(1, harmonics + 1)
         if mult * signal_bin <= np.max(freq)
     ]
     # tones that surpass Fs are aliased back to [0, Fs/2] spectrum
-    harmonic_bins = [fs - bin if bin > fs / 2 else bin for bin in harmonic_bins]
+    harmonic_bins = [
+        pspectrum.index[
+            np.abs(pspectrum.index - (fs - bin))
+            == np.min(np.abs(pspectrum.index - (fs - bin)))
+        ]
+        if bin > fs / 2
+        else bin
+        for bin in harmonic_bins
+    ]
     # indexes of the harmonic bins
     harmonic_bins_idxs = [pspectrum.index.get_loc(bin) for bin in harmonic_bins]
     harmonics_power = np.array(
@@ -538,7 +641,7 @@ def daosDynamicEval(
         HD3 = 10 * np.log10(harmonics_power[2] / harmonics_power[0])
     except IndexError:
         log.warning(
-            r"Harmonics of order above the fundamental were not accessible - likely because the sampling frequency (F[sub]sampling[/sub]) is lower than 2*F[sub]signal[/sub]."
+            "\nHarmonics of order above the fundamental were not accessible.\nThis is likely because the sampling frequency (Fs) \n is lower than the signal's fundamental frequency."
         )
     # ********************************************
     # Computing Gain - Output Signal amplitude
@@ -651,6 +754,10 @@ def daosDynamicEval(
     BANDWIDTH = 1 / RISETIME_90
 
     if show_rise_time_eval:
+        log.warning(
+            "\nRise Time Evaluation plotting is dehactivated due to some problems."
+        )
+        """
         rc("axes", titlesize=14)  # fontsize of the axes title
         rc("axes", labelsize=12)  # fontsize of the x and y labels
         rc("xtick", labelsize=12)  # fontsize of the tick labels
@@ -717,8 +824,12 @@ def daosDynamicEval(
         )
         legend(loc="lower right")
         show()
+        clf()
+        """
+    target_harmonics = list(zip(harmonic_bins, 10 * np.log10(harmonics_power)))
     return (
         spectrum,
+        target_harmonics,
         SIGNAL_POWER_DB,
         DC_POWER_DB,
         GAIN,

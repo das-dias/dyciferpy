@@ -25,20 +25,20 @@ def plotPrettyFFT(
     file_path: str = None,
     xlog: bool = False,
     show: bool = False,
-    *args,
-    **kwargs,
+    target_harmonics: list = None,
 ):
     """_summary_
     Plot a pretty FFT plot
     Args:
-        freq (np.array/list): frequency array
-        power (np.array/list): power array
+        freq (array/list): frequency array
+        power (array/list): power array
         title (str)     : title of the plot
         xlabel (str)    : x-axis label
         ylabel (str)    : y-axis label
         file_path (str) : path to save the plot
         xlog (bool)     : log scale
         show (bool)     : show the plot
+        target_harmonics (list): list (frequency, power) tuples of target harmonics to highlight
     NOTE:
         kwargs example:
         kwargs = {
@@ -49,8 +49,9 @@ def plotPrettyFFT(
     """
     import matplotlib.pyplot as plt
     from matplotlib import rcParams
-    from numpy import min, where
+    from numpy import min, where, max, floor, abs, array, append, sort, argsort
     import pdb
+    from itertools import cycle
 
     plt.rc("axes", titlesize=14)  # fontsize of the axes title
     plt.rc("axes", labelsize=12)  # fontsize of the x and y labels
@@ -61,34 +62,53 @@ def plotPrettyFFT(
     # define font family to use for all text
     rcParams["font.family"] = "serif"
     # plt.figure(figsize=(8,6))
-    markerline, stemlines, baseline = plt.stem(freq, power, bottom=min(power), **kwargs)
+    # markerline, stemlines, baseline = plt.stem(freq, power, bottom=min(power), use_line_collection=True, linefmt="b-", markerfmt="bD", basefmt="r-")
+    # markerline.set_markerfacecolor("none")
+    # stemlines.set_color("black")
+    harmonics = [
+        (freq[where(power == max(power[1:]))][0], max(power[1:]))
+    ]  # don't count the dc component
+    harmonics = target_harmonics if bool(target_harmonics) else harmonics
+    # add the target harmonics to the plot in case they were folded into the positive frequency axis
+    new_freq = append(freq, [harmonics[i][0] for i in range(len(harmonics))])
+    freq = sort(new_freq)
+    power = append(power, [harmonics[i][1] for i in range(len(harmonics))])[
+        argsort(new_freq)
+    ]
+    plt.plot(freq, power, "b-")
+    markerline, _, _ = plt.stem(
+        freq,
+        power,
+        bottom=min(power),
+        use_line_collection=True,
+        linefmt="b-",
+        markerfmt="none",
+        basefmt="r-",
+    )
     markerline.set_markerfacecolor("none")
-    # highlight the spectral signal components
-    signal_freq = freq[where(power == max(power[1:]))]  # don't count the dc component
-    colours = ["r", "b", "g", "k", "m"]
-    line_styles = ["-.", "--", "-.", "-", "--"]
-    for c, ls, f in zip(colours, line_styles, signal_freq):
-        plt.axvline(
-            f,
-            ymin=min(power[1:]),
-            color=c,
-            linestyle=ls,
-            linewidth=3,
-            label=f"Fundamnetal Harmonic @ {f/1e9:.3}G Hz",
-        )
+    colours = cycle(["red", "brown", "green", "black", "magenta", "cyan", "yellow"])
+    # line_styles = cycle(["-.", "--", "-.", "-", "--"])
+    labels = [
+        f"H{x}@{f/1e9:.3f} GHz"
+        for (x, f) in enumerate([f for f, _ in harmonics], start=1)
+    ]
     plt.axhline(
         max(power[1:]),
         color="k",
         linestyle="--",
         linewidth=3,
-        label=f"Fundamental Harmonic Power = {max(power[1:]):.2f} (dB)",
+        label=f"H1 Power={max(power[1:]):.2f} (dB)",
     )
-    # pdb.set_trace()
+    for color, harmonic, label in zip(colours, harmonics, labels):
+        x = harmonic[0]
+        y = harmonic[1]
+        plt.plot(x, [y], "D", color=color, label=label)
+
     plt.grid()
     plt.title(title)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
-    plt.legend(loc="lower right")
+    plt.legend(loc="upper right")
     if xlog:
         plt.xscale("log")
     if show:
