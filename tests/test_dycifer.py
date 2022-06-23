@@ -2,7 +2,7 @@ from re import X
 from dycifer import __version__
 from dycifer.read import readSignals
 from dycifer.mixed_signals import adcDynamicEval
-from dycifer.analog import caosDynamicEval
+from dycifer.analog import caosDynamicEval, daosDynamicEval
 from dycifer.dycifer import cli
 import unittest
 from dycifer.utils import plotPrettyFFT
@@ -234,8 +234,8 @@ class TestDycifer(unittest.TestCase):
             hd3,
         ) = caosDynamicEval(
             signals,
-            "vin",
             "vout",
+            input_signal_name="vin",
             signal_span_factor=0.002,
             noise_power=0.0,
             downsampling=5,
@@ -264,6 +264,67 @@ class TestDycifer(unittest.TestCase):
         self.assertAlmostEqual(sndr, 19.95678626217358, places=3)
         self.assertAlmostEqual(hd2, -20.000000000000103, places=3)
         self.assertAlmostEqual(hd3, -40.00000000000053, places=3)
+
+    def test_daosDynamicEval_plotPrettyFFT_multiple(self):
+
+        file_path = "./resources/data/fft_points_c2c_256_bin7.csv"
+        signals = readSignals(file_path)
+        plt.plot(signals.index, signals["bit0_sampled (V)"])
+        plt.show()
+        (
+            out_spectrum,
+            signal_power,
+            dc_power,
+            gain,
+            gain_db,
+            sfdr,
+            thd,
+            snr,
+            sndr,
+            hd2,
+            hd3,
+            rise_time_90,
+            bandwidth,
+        ) = daosDynamicEval(
+            signals,
+            "bit0_sampled (V)",
+            signal_span_factor=0.002,
+            noise_power=0.0,
+            downsampling=5,
+            wave_type="pulse",
+            show_rise_time_eval=True,
+        )  # 0.2 % of power spectral density leakage
+        self.assertIsNotNone(out_spectrum)
+        self.assertEqual(DataFrame, type(out_spectrum))
+        kwargs = {
+            "linefmt": "b-",
+            "markerfmt": "bD",
+            "basefmt": "k-",
+        }
+        """
+        plotPrettyFFT(
+            out_spectrum.index[out_spectrum.index >= 0],
+            out_spectrum["power_db"][out_spectrum.index >= 0],
+            show=True,
+            **kwargs
+        )
+        """
+        print("signal_power:", signal_power)
+        print("dc_power:", dc_power)
+        print("gain:", gain)
+        print("rise_time_90 (s):", rise_time_90)
+        print("bandwidth (GHz):", bandwidth / 1e9)
+        """
+        self.assertAlmostEqual(signal_power, -6.020599913279618, places=3)
+        self.assertAlmostEqual(dc_power, -6.935749724493102, places=3)
+        self.assertAlmostEqual(gain, 999.9999999999966, places=3)
+        self.assertAlmostEqual(sfdr, 20.000000000000103, places=3)
+        self.assertAlmostEqual(thd, -19.95678626217368, places=3)
+        self.assertAlmostEqual(snr, 156.36918103207805, places=3)
+        self.assertAlmostEqual(sndr, 19.95678626217358, places=3)
+        self.assertAlmostEqual(hd2, -20.000000000000103, places=3)
+        self.assertAlmostEqual(hd3, -40.00000000000053, places=3)
+        """
 
 
 if __name__ == "__main__":

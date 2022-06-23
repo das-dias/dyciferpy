@@ -6,6 +6,7 @@ import numpy as np
 from dycifer.utils import plotPrettyFFT
 from dycifer.read import readSignals
 from modelling_utils import stof, timer
+from enum import Enum
 
 
 def analogDynamicEval(subparser, *args, **kwargs):
@@ -128,8 +129,8 @@ def analogDynamicEval(subparser, *args, **kwargs):
 @timer
 def caosDynamicEval(
     signals: DataFrame,
-    input_signal_name: str,
     output_signal_name: str,
+    input_signal_name: str = None,
     harmonics: int = 7,
     signal_span_factor: float = 0.0,
     noise_power: float = -1.0,
@@ -142,6 +143,9 @@ def caosDynamicEval(
         harmonics (int, optional): The number of harmonics to be used in the CAOS. Defaults to 7.
         signal_span_factor (float, optional): The factor to be used to scale the signal span. Defaults to 0.0.
         noise_power (float, optional): The noise power to be used in the CAOS. Defaults to -1.0.
+        output_signal_name (str): The name of the output signal.
+        input_signal_name (str, optional): The name of the input signal. Defaults to None. In no input signal is provided,
+        the Gain of the system will not be computed.
     Returns:
         tuple[DataFrame, float, float, float, float, float, float, float]: The CAOS performance evaluation results.
             DataFrame: The frequency spectrum of the CAOS output signal in volt, volt squared (power in watt) and decibels.
@@ -158,8 +162,6 @@ def caosDynamicEval(
     """
     if not bool(signals.index.name):
         raise ValueError("The signals DataFrame must have time axis.")
-    if not (input_signal_name in signals.columns):
-        raise ValueError(f"{input_signal_name} does not belong to the parsed signals.")
     if not (output_signal_name in signals.columns):
         raise ValueError(f"{output_signal_name} does not belong to the parsed signals.")
     # perform downsampling if so was chosen
@@ -283,39 +285,51 @@ def caosDynamicEval(
     # to Input Signal amplitude ratio
     # ********************************************
     # measure the power of the fundamental harmonic of the input spectrum
-    vin = np.abs(
-        np.fft.fftshift(np.fft.fft(signals[input_signal_name].values) / n_samples)
-    )
-    freq_in = np.fft.fftshift(np.fft.fftfreq(len(vin), ts))  # [Hz]
-    in_power = vin * vin
-    in_power_db = np.nan_to_num(
-        10 * np.log10(in_power), nan=0.0, posinf=0.0, neginf=0.0, copy=True
-    )
-    in_spectrum = DataFrame(
-        index=freq_in,
-        data={"vin": vin, "in_power": in_power, "in_power_db": in_power_db},
-    )
-    in_pspectrum = in_spectrum[in_spectrum.index >= 0].copy()
-    in_signal_bin = in_pspectrum["in_power"][
-        0 + span :
-    ].idxmax()  # don't count DC signal when searching for the signal bin
-    # obtain the harmonics of the signal from the signal bin
-    in_harmonic_bins = [
-        mult * in_signal_bin
-        for mult in range(1, harmonics + 1)
-        if mult * signal_bin <= np.max(freq)
-    ]
-    # tones that surpass Fs are aliased back to [0, Fs/2] spectrum
-    in_harmonic_bins = [fs - bin if bin > fs / 2 else bin for bin in in_harmonic_bins]
-    # indexes of the harmonic bins
-    in_harmonic_bins_idxs = [pspectrum.index.get_loc(bin) for bin in in_harmonic_bins]
-    input_signal_power = np.sum(
-        in_pspectrum["in_power"]
-        .iloc[in_harmonic_bins_idxs[0] : in_harmonic_bins_idxs[0] + span]
-        .values
-    )
-    GAIN = np.sqrt(signal_power / input_signal_power)
-    GAIN_DB = 10 * np.log10(GAIN)
+    GAIN = np.nan
+    GAIN_DB = np.nan
+    if bool(input_signal_name):
+        if not (input_signal_name in signals.columns):
+            raise ValueError(
+                f"{input_signal_name} does not belong to the parsed signals."
+            )
+
+        vin = np.abs(
+            np.fft.fftshift(np.fft.fft(signals[input_signal_name].values) / n_samples)
+        )
+        freq_in = np.fft.fftshift(np.fft.fftfreq(len(vin), ts))  # [Hz]
+        in_power = vin * vin
+        in_power_db = np.nan_to_num(
+            10 * np.log10(in_power), nan=0.0, posinf=0.0, neginf=0.0, copy=True
+        )
+        in_spectrum = DataFrame(
+            index=freq_in,
+            data={"vin": vin, "in_power": in_power, "in_power_db": in_power_db},
+        )
+        in_pspectrum = in_spectrum[in_spectrum.index >= 0].copy()
+        in_signal_bin = in_pspectrum["in_power"][
+            0 + span :
+        ].idxmax()  # don't count DC signal when searching for the signal bin
+        # obtain the harmonics of the signal from the signal bin
+        in_harmonic_bins = [
+            mult * in_signal_bin
+            for mult in range(1, harmonics + 1)
+            if mult * signal_bin <= np.max(freq)
+        ]
+        # tones that surpass Fs are aliased back to [0, Fs/2] spectrum
+        in_harmonic_bins = [
+            fs - bin if bin > fs / 2 else bin for bin in in_harmonic_bins
+        ]
+        # indexes of the harmonic bins
+        in_harmonic_bins_idxs = [
+            pspectrum.index.get_loc(bin) for bin in in_harmonic_bins
+        ]
+        input_signal_power = np.sum(
+            in_pspectrum["in_power"]
+            .iloc[in_harmonic_bins_idxs[0] : in_harmonic_bins_idxs[0] + span]
+            .values
+        )
+        GAIN = np.sqrt(signal_power / input_signal_power)
+        GAIN_DB = 10 * np.log10(GAIN)
     return (
         spectrum,
         SIGNAL_POWER_DB,
@@ -331,16 +345,47 @@ def caosDynamicEval(
     )
 
 
+class WaveTypes(Enum):
+    """_summary_
+
+    Args:
+        PULSE (str): Pure Pulse waveform selector
+        SAWTOOTH (str): Pure Sawtooth waveform selector
+        DEFAULT (str): Default modulated, square waveform selector
+    """
+
+    PULSE = "pulse"
+    SAWTOOTH = "sawtooth"
+    DEFAULT = "default"
+
+
 @timer
 def daosDynamicEval(
     signals: DataFrame,
-    input_signal_name: str,
     output_signal_name: str,
+    input_signal_name: str = None,
     harmonics: int = 7,
     signal_span_factor: float = 0.0,
     noise_power: float = -1.0,
     downsampling: int = 1,
+    wave_type: str = "default",
+    levels: tuple = (0.1, 0.9),
+    show_rise_time_eval: bool = False,
 ) -> tuple[DataFrame, float, float, float, float, float, float, float, float, float]:
+    from heapq import nlargest
+    from warnings import warn
+    from matplotlib.pyplot import (
+        plot,
+        show,
+        xlabel,
+        ylabel,
+        grid,
+        title,
+        legend,
+        arrow,
+        rc,
+    )
+
     """_summary_
     Dynamic performance evaluation of Discrete Analog Output Systems (CAOS)
     Args:
@@ -348,6 +393,11 @@ def daosDynamicEval(
         harmonics (int, optional): The number of harmonics to be used in the CAOS. Defaults to 7.
         signal_span_factor (float, optional): The factor to be used to scale the signal span. Defaults to 0.0.
         noise_power (float, optional): The noise power to be used in the CAOS. Defaults to -1.0.
+        output_signal_name (str): The name of the output signal.
+        input_signal_name (str, optional): The name of the input signal. Defaults to None. In no input signal is provided,
+        the Gain of the system will not be computed.
+        wave_type (str, optional): The type of wave to be used in the DAOS. Defaults to "pulse". Options:
+        levels (tuple, optional): The levels to be used in the Risetime computation. Defaults to (0.1, 0.9).
     Returns:
         tuple[DataFrame, float, float, float, float, float, float, float]: The CAOS performance evaluation results.
         DataFrame: The frequency spectrum of the CAOS output signal in volt, volt squared (power in watt) and decibels.
@@ -362,13 +412,11 @@ def daosDynamicEval(
         float(9): Fractional Second-Harmonic Distortion (HD2) metric
         float(10): Fractional Third-Harmonic Distortion (HD3) metric
         float(11): Average Rise Time (ns) in 90% of the signal
-        float(12): Average Fall Time (ns) in 90% of the signal
+        float(12): Estimated Bandwidth (Hz) of the output signal
     """
 
     if not bool(signals.index.name):
         raise ValueError("The signals DataFrame must have time axis.")
-    if not (input_signal_name in signals.columns):
-        raise ValueError(f"{input_signal_name} does not belong to the parsed signals.")
     if not (output_signal_name in signals.columns):
         raise ValueError(f"{output_signal_name} does not belong to the parsed signals.")
     # perform downsampling if so was chosen
@@ -483,46 +531,65 @@ def daosDynamicEval(
     # Distortion of Second and Third order
     # harmonics
     # ********************************************
-    HD2 = 10 * np.log10(harmonics_power[1] / harmonics_power[0])
-    HD3 = 10 * np.log10(harmonics_power[2] / harmonics_power[0])
+    HD2 = np.nan
+    HD3 = np.nan
+    try:
+        HD2 = 10 * np.log10(harmonics_power[1] / harmonics_power[0])
+        HD3 = 10 * np.log10(harmonics_power[2] / harmonics_power[0])
+    except IndexError:
+        log.warning(
+            r"Harmonics of order above the fundamental were not accessible - likely because the sampling frequency (F[sub]sampling[/sub]) is lower than 2*F[sub]signal[/sub]."
+        )
     # ********************************************
     # Computing Gain - Output Signal amplitude
     # to Input Signal amplitude ratio
     # ********************************************
     # measure the power of the fundamental harmonic of the input spectrum and divide both output and input powers
-    vin = np.abs(
-        np.fft.fftshift(np.fft.fft(signals[input_signal_name].values) / n_samples)
-    )
-    freq_in = np.fft.fftshift(np.fft.fftfreq(len(vin), ts))  # [Hz]
-    in_power = vin * vin
-    in_power_db = np.nan_to_num(
-        10 * np.log10(in_power), nan=0.0, posinf=0.0, neginf=0.0, copy=True
-    )
-    in_spectrum = DataFrame(
-        index=freq_in,
-        data={"vin": vin, "in_power": in_power, "in_power_db": in_power_db},
-    )
-    in_pspectrum = in_spectrum[in_spectrum.index >= 0].copy()
-    in_signal_bin = in_pspectrum["in_power"][
-        0 + span :
-    ].idxmax()  # don't count DC signal when searching for the signal bin
-    # obtain the harmonics of the signal from the signal bin
-    in_harmonic_bins = [
-        mult * in_signal_bin
-        for mult in range(1, harmonics + 1)
-        if mult * signal_bin <= np.max(freq)
-    ]
-    # tones that surpass Fs are aliased back to [0, Fs/2] spectrum
-    in_harmonic_bins = [fs - bin if bin > fs / 2 else bin for bin in in_harmonic_bins]
-    # indexes of the harmonic bins
-    in_harmonic_bins_idxs = [pspectrum.index.get_loc(bin) for bin in in_harmonic_bins]
-    input_signal_power = np.sum(
-        in_pspectrum["in_power"]
-        .iloc[in_harmonic_bins_idxs[0] : in_harmonic_bins_idxs[0] + span]
-        .values
-    )
-    GAIN = np.sqrt(signal_power / input_signal_power)
-    GAIN_DB = 10 * np.log10(GAIN)
+    GAIN = np.nan
+    GAIN_DB = np.nan
+    if bool(input_signal_name):
+        if not (input_signal_name in signals.columns):
+            raise ValueError(
+                f"{input_signal_name} does not belong to the parsed signals."
+            )
+
+        vin = np.abs(
+            np.fft.fftshift(np.fft.fft(signals[input_signal_name].values) / n_samples)
+        )
+        freq_in = np.fft.fftshift(np.fft.fftfreq(len(vin), ts))  # [Hz]
+        in_power = vin * vin
+        in_power_db = np.nan_to_num(
+            10 * np.log10(in_power), nan=0.0, posinf=0.0, neginf=0.0, copy=True
+        )
+        in_spectrum = DataFrame(
+            index=freq_in,
+            data={"vin": vin, "in_power": in_power, "in_power_db": in_power_db},
+        )
+        in_pspectrum = in_spectrum[in_spectrum.index >= 0].copy()
+        in_signal_bin = in_pspectrum["in_power"][
+            0 + span :
+        ].idxmax()  # don't count DC signal when searching for the signal bin
+        # obtain the harmonics of the signal from the signal bin
+        in_harmonic_bins = [
+            mult * in_signal_bin
+            for mult in range(1, harmonics + 1)
+            if mult * signal_bin <= np.max(freq)
+        ]
+        # tones that surpass Fs are aliased back to [0, Fs/2] spectrum
+        in_harmonic_bins = [
+            fs - bin if bin > fs / 2 else bin for bin in in_harmonic_bins
+        ]
+        # indexes of the harmonic bins
+        in_harmonic_bins_idxs = [
+            pspectrum.index.get_loc(bin) for bin in in_harmonic_bins
+        ]
+        input_signal_power = np.sum(
+            in_pspectrum["in_power"]
+            .iloc[in_harmonic_bins_idxs[0] : in_harmonic_bins_idxs[0] + span]
+            .values
+        )
+        GAIN = np.sqrt(signal_power / input_signal_power)
+        GAIN_DB = 10 * np.log10(GAIN)
     # ********************************************
     # Computing output signal's
     # risetime @90% signal variation
@@ -535,7 +602,121 @@ def daosDynamicEval(
     # between static levels
     # ********************************************
     RISETIME_90 = 0.0
-    FALLTIME_90 = 0.0
+    vout = signals[output_signal_name].values
+    if wave_type in [WaveTypes.SAWTOOTH.value, WaveTypes.PULSE.value]:
+        threshold_vout = np.min(vout)
+    elif wave_type is WaveTypes.DEFAULT.value:
+        threshold_vout = np.mean(vout)
+    else:
+        raise ValueError(
+            f"{wave_type} is not a valid wave type. Possible types are: {[elem.value for elem in WaveTypes]}."
+        )
+    # comput output signal histogram
+    hist, bin_edges = np.histogram(vout)
+    hist, bin_edges = hist / sum(hist), np.array(bin_edges)
+    # through the histogram, find the discrete signal levels to be accounted for in the risetime
+    hist_filtered = hist[bin_edges[:-1] > threshold_vout]
+    signal_levels_prob = nlargest(2, hist_filtered)
+    signal_levels = (
+        bin_edges[:-1][bin_edges[:-1] > threshold_vout][
+            hist_filtered == signal_levels_prob[0]
+        ],
+        bin_edges[:-1][bin_edges[:-1] > threshold_vout][
+            hist_filtered == signal_levels_prob[1]
+        ],
+    )
+    # upper_signal_levels = sorted((signal_levels[0][0], signal_levels[1][0]))
+    signal_levels = signal_levels[0][0], signal_levels[1][0]
+    s0, s100 = sorted(signal_levels)
+    # measure all the transitions between these the signal levels found using the mean value of the signal
+    delta_v = np.diff(vout)
+    if levels[0] > levels[1]:
+        raise ValueError(
+            f"Rise Time computation levels must be in ascending order, but levels {levels} were given."
+        )
+    level0 = levels[0]
+    level1 = levels[1]
+    t10 = (s0 + (s100 - s0) * level0 - vout[:-1]) / delta_v
+    idx10 = np.where((t10 > 0) & (t10 < 1))[0]
+    t10 = idx10 + t10[idx10]
+    t90 = (s0 + (s100 - s0) * level1 - vout[:-1]) / delta_v
+    idx90 = np.where((t90 > 0) & (t90 < 1))[0]
+    t90 = idx90 + t90[idx90]
+
+    # compute all possible transition times, keep the smallest
+    idx = np.unravel_index(np.argmin(np.abs(t90[:, None] - t10)), (len(t90), len(t10)))
+    RISETIME_90 = (
+        np.abs((t90[idx[0]] - t10[idx[1]])) * ts
+    )  # finally, compute the risetime
+    BANDWIDTH = 1 / RISETIME_90
+
+    if show_rise_time_eval:
+        rc("axes", titlesize=14)  # fontsize of the axes title
+        rc("axes", labelsize=12)  # fontsize of the x and y labels
+        rc("xtick", labelsize=12)  # fontsize of the tick labels
+        rc("ytick", labelsize=12)  # fontsize of the tick labels
+        rc("legend", fontsize=11)  # legend fontsize
+        rc("font", size=11)  # controls default text sizes
+        rc("font", family="serif")  # default serif font
+        plot(signals.index, vout, label=output_signal_name)
+        xlabel("Time [s]")
+        ylabel("Voltage [V]")
+        grid()
+        title(
+            f"Output signal RiseTime[{level0*100:.2f}% - {level1*100:.2f}%] Evaluation"
+        )
+        x = t10[idx[1]] * ts
+        y = s0 + (s100 - s0) * level0
+        dx = t90[idx[0]] * ts - x
+        dy = s0 + (s100 - s0) * level1 - y
+        # plot(t10*ts, [s0 + (s100-s0)*level0]*len(t10), 'go')
+        plot(x, [y], "go")
+        plot(
+            x,
+            [y],
+            "o",
+            mec="g",
+            mfc="None",
+            ms=10,
+            label=f"Signal Level[{level0*100}%]",
+        )
+        # plot(t90*ts, [s0 + (s100-s0)*level1]*len(t90), 'ro')
+        plot(x + dx, [y + dy], "ro")
+        plot(
+            x + dx,
+            [y + dy],
+            "o",
+            mec="r",
+            mfc="None",
+            ms=10,
+            label=f"Signal Level[{level1*100}%]",
+        )
+        # double sided arrow
+        arrow(
+            x,
+            y,
+            dx,
+            dy,
+            color="k",
+            label=f"RiseTime @ [{level1*100}%] = {RISETIME_90/1e-9:.3f} ns",
+            width=ts / 2,
+            head_length=0.05,
+            head_width=ts * 2,
+            length_includes_head=True,
+        )
+        arrow(
+            x + dx,
+            y + dy,
+            -dx,
+            -dy,
+            color="k",
+            width=ts / 2,
+            head_length=0.05,
+            head_width=2 * ts,
+            length_includes_head=True,
+        )
+        legend(loc="lower right")
+        show()
     return (
         spectrum,
         SIGNAL_POWER_DB,
@@ -549,5 +730,5 @@ def daosDynamicEval(
         HD2,
         HD3,
         RISETIME_90,
-        FALLTIME_90,
+        BANDWIDTH,
     )

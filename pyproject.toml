@@ -27,7 +27,7 @@ mode = "pipenv"
 pre-commit = ["autohooks.plugins.black"]
 
 [tool.autohooks.plugins.black]
-arguments = ["--fast", "--check", "--diff"]
+arguments = ["--fast"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
