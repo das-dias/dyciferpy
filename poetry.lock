@@ -187,6 +187,18 @@ docs = ["olefile", "sphinx (>=2.4)", "sphinx-copybutton", "sphinx-issues (>=3.0.
 tests = ["check-manifest", "coverage", "defusedxml", "markdown2", "olefile", "packaging", "pyroma", "pytest", "pytest-cov", "pytest-timeout"]
 
 [[package]]
+name = "plotext"
+version = "5.0.2"
+description = "plotext plots directly on terminal"
+category = "main"
+optional = false
+python-versions = ">=3.5"
+
+[package.extras]
+image = ["pillow (>=8.4)"]
+video = ["ffpyplayer (>=4.3.5)", "opencv-python (>=4.5.5)", "pafy (>=0.5.5)", "pillow (>=8.4)"]
+
+[[package]]
 name = "pluggy"
 version = "0.13.1"
 description = "plugin and hook calling mechanisms for python"
@@ -371,7 +383,7 @@ dev = ["pytest (>=4.6.2)", "black (>=19.3b0)"]
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.9,<3.11"
-content-hash = "32c471be9064f74d042af620b817a66a38ad5c11961e1fdf8b9cc165b3824821"
+content-hash = "480122f66d9fef8b204765794287a4184d16f388435fd3aafcb8d1ceaaf399b5"
 
 [metadata.files]
 argparse = [
@@ -582,6 +594,10 @@ pillow = [
     {file = "Pillow-9.1.1-pp38-pypy38_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:937a54e5694684f74dcbf6e24cc453bfc5b33940216ddd8f4cd8f0f79167f765"},
     {file = "Pillow-9.1.1-pp38-pypy38_pp73-win_amd64.whl", hash = "sha256:baf3be0b9446a4083cc0c5bb9f9c964034be5374b5bc09757be89f5d2fa247b8"},
     {file = "Pillow-9.1.1.tar.gz", hash = "sha256:7502539939b53d7565f3d11d87c78e7ec900d3c72945d4ee0e2f250d598309a0"},
+]
+plotext = [
+    {file = "plotext-5.0.2-py3-none-any.whl", hash = "sha256:04facb1dd01693f95a08d6aed845c250728b04c6ef08b805546164a57fa16386"},
+    {file = "plotext-5.0.2.tar.gz", hash = "sha256:e1ece29999f241dcc2806a55331265659bcbe8cbd896743067b941f97a8348dc"},
 ]
 pluggy = [
     {file = "pluggy-0.13.1-py2.py3-none-any.whl", hash = "sha256:966c145cd83c96502c3c3868f50408687b38434af77734af1e9ca461a4081d2d"},

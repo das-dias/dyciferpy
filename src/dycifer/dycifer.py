@@ -189,6 +189,13 @@ __cmd_args = {
             bool,
             "opt",
         ),
+        "-pt": (
+            "--plot-to-terminal",
+            "Plot the resulting analysis graphs to the terminal in ASCII mode",
+            "",
+            bool,
+            "opt",
+        ),
     },
 }
 

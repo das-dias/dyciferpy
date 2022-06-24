@@ -86,6 +86,7 @@ def analogDynamicEval(subparser, *args, **kwargs):
                 show=True,
                 xlog=False,
                 target_harmonics=target_harmonics,
+                plot_to_terminal=argv.plot_to_terminal,
             )
         if bool(argv.output_file):
             plotPrettyFFT(
@@ -173,6 +174,7 @@ def analogDynamicEval(subparser, *args, **kwargs):
                 show=True,
                 xlog=False,
                 target_harmonics=target_harmonics,
+                plot_to_terminal=argv.plot_to_terminal,
             )
         if bool(argv.output_file):
             plotPrettyFFT(

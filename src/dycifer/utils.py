@@ -26,6 +26,7 @@ def plotPrettyFFT(
     xlog: bool = False,
     show: bool = False,
     target_harmonics: list = None,
+    plot_to_terminal: bool = False,
 ):
     """_summary_
     Plot a pretty FFT plot
@@ -47,6 +48,7 @@ def plotPrettyFFT(
             "basefmt":"r-",
         }
     """
+    import plotext as tplt
     import matplotlib.pyplot as plt
     from matplotlib import rcParams
     from numpy import min, where, max, floor, abs, array, append, sort, argsort
@@ -75,48 +77,89 @@ def plotPrettyFFT(
     power = append(power, [harmonics[i][1] for i in range(len(harmonics))])[
         argsort(new_freq)
     ]
-    plt.plot(freq, power, "b-")
-    markerline, _, _ = plt.stem(
-        freq,
-        power,
-        bottom=min(power),
-        use_line_collection=True,
-        linefmt="b-",
-        markerfmt="none",
-        basefmt="r-",
-    )
-    markerline.set_markerfacecolor("none")
-    colours = cycle(["red", "brown", "green", "black", "magenta", "cyan", "yellow"])
-    # line_styles = cycle(["-.", "--", "-.", "-", "--"])
-    labels = [
-        f"H{x}@{f/1e9:.3f} GHz"
-        for (x, f) in enumerate([f for f, _ in harmonics], start=1)
-    ]
-    plt.axhline(
-        max(power[1:]),
-        color="k",
-        linestyle="--",
-        linewidth=3,
-        label=f"H1 Power={max(power[1:]):.2f} (dB)",
-    )
-    for color, harmonic, label in zip(colours, harmonics, labels):
-        x = harmonic[0]
-        y = harmonic[1]
-        plt.plot(x, [y], "D", color=color, label=label)
+    if plot_to_terminal and show:
+        tplt.plot(freq, power)
+        tplt.ylim(min(power), max(power) + abs(max(power)) * 1.1)
+        # plot the marks of the harmonics
+        colours = cycle(
+            ["red+", "gray+", "green+", "white", "magenta+", "cyan+", "yellow+"]
+        )
+        # line_styles = cycle(["-.", "--", "-.", "-", "--"])
+        labels = [
+            f"H{x}@{f/1e9:.3f} GHz"
+            for (x, f) in enumerate([f for f, _ in harmonics], start=1)
+        ]
+        """
+        tplt.horizontal_line(
+            max(power[1:]),
+            color="white",
+        )
+        """
+        for color, harmonic, label in zip(colours, harmonics, labels):
+            x = harmonic[0]
+            y = harmonic[1]
+            tplt.plot([x], [y], marker="sd", color=color)
+            tplt.text(label, x, y - 0.06 * abs(y), color=color)
 
-    plt.grid()
-    plt.title(title)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.legend(loc="upper right")
-    if xlog:
-        plt.xscale("log")
-    if show:
-        plt.show()
-    if bool(file_path):
-        if not os.path.exists(getParent(file_path)):
-            raise FileNotFoundError(
-                f"Directory does not exist : {getParent(file_path)}"
-            )
-        plt.savefig(file_path)
+        tplt.grid()
+        tplt.title(title + f"- H1 Power={max(power[1:]):.2f} (dB)")
+        tplt.xlabel(xlabel)
+        tplt.ylabel(ylabel)
+        if xlog:
+            tplt.xscale("log")
+        tplt.theme("dark")
+        tplt.show()
+        # clear data
+        if bool(file_path):
+            if not os.path.exists(getParent(file_path)):
+                raise FileNotFoundError(
+                    f"Directory does not exist : {getParent(file_path)}"
+                )
+            tplt.savefig(file_path)
+        tplt.cld()
+    else:
+        plt.plot(freq, power, "b-")
+        markerline, _, _ = plt.stem(
+            freq,
+            power,
+            bottom=min(power),
+            use_line_collection=True,
+            linefmt="b-",
+            markerfmt="none",
+            basefmt="r-",
+        )
+        markerline.set_markerfacecolor("none")
+        colours = cycle(["red", "brown", "green", "black", "magenta", "cyan", "yellow"])
+        # line_styles = cycle(["-.", "--", "-.", "-", "--"])
+        labels = [
+            f"H{x}@{f/1e9:.3f} GHz"
+            for (x, f) in enumerate([f for f, _ in harmonics], start=1)
+        ]
+        plt.axhline(
+            max(power[1:]),
+            color="k",
+            linestyle="--",
+            linewidth=3,
+            label=f"H1 Power={max(power[1:]):.2f} (dB)",
+        )
+        for color, harmonic, label in zip(colours, harmonics, labels):
+            x = harmonic[0]
+            y = harmonic[1]
+            plt.plot(x, [y], "D", color=color, label=label)
+
+        plt.grid()
+        plt.title(title)
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        plt.legend(loc="upper right")
+        if xlog:
+            plt.xscale("log")
+        if show:
+            plt.show()
+        if bool(file_path):
+            if not os.path.exists(getParent(file_path)):
+                raise FileNotFoundError(
+                    f"Directory does not exist : {getParent(file_path)}"
+                )
+            plt.savefig(file_path)
     plt.clf()

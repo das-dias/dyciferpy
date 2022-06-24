@@ -91,6 +91,7 @@ def mixedSignalsDynamicEval(subparser, *args, **kwargs):
                 ylabel="Power (dB)",
                 show=True,
                 target_harmonics=target_harmonics,
+                plot_to_terminal=argv.plot_to_terminal,
             )
         if bool(argv.output_file):
             plotPrettyFFT(
@@ -197,7 +198,7 @@ def adcDynamicEval(
     # extract the number of bits of the ADC
     resolution = n_bits if n_bits > 0 else len(signals.columns)
     # v_step = v_source / ((2 ** resolution)-1)
-    n_samples = len(signals.index)
+
     """
     * ***********************************************************************************
     * * Compute the Dout signal if no resolution is provided as input, otherwise
@@ -235,13 +236,14 @@ def adcDynamicEval(
             0, np.sqrt(noise_watt), size=len(dout)
         )
     dout = dout["vout"]
+    n_samples = len(dout)
     """
     * ***********************************************************************************
     * * Fast Fourier Transform (FFT) of the Dout Signal
     * ***********************************************************************************
     """
     vout = np.abs(np.fft.fftshift(np.fft.fft(dout.values) / n_samples))  # [V]
-    freq = np.fft.fftshift(np.fft.fftfreq(len(vout), ts))  # [Hz]
+    freq = np.fft.fftshift(np.fft.fftfreq(n_samples, ts))  # [Hz]
     power = (
         vout * vout
     )  # [V^2] - square the voltage spectrum to obtain the power spectrum
@@ -286,7 +288,7 @@ def adcDynamicEval(
         pspectrum.index[
             np.abs(pspectrum.index - (fs - bin))
             == np.min(np.abs(pspectrum.index - (fs - bin)))
-        ]
+        ][0]
         if bin > fs / 2
         else bin
         for bin in harmonic_bins
