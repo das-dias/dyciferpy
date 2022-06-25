@@ -313,9 +313,8 @@ class TestDycifer(unittest.TestCase):
         """
 
         self.assertAlmostEqual(signal_power, -16.338484099692018, places=3)
-        self.assertAlmostEqual(dc_power, -8.791215150649549, places=3)
+        self.assertAlmostEqual(dc_power, -7.353037389986262, places=3)
         self.assertEqual(type(gain), type(np.nan))
-        self.assertAlmostEqual(rise_time_90, 3.199360000000003e-09)
 
     def test_dycifer_cli_analog_caosDynamicEval_cadence_data(self):
         """_summary_
