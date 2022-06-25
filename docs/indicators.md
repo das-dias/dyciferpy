@@ -38,8 +38,28 @@ And thus, its decibels representation be given by:
 
 - $G_{dB - Voltage}=20.log_{10}(G_{Voltage})$ (dB)
 
+
+
 ### 4 - 2<sup>nd</sup> Order Harmonic Distortion (HD2)
+Considering now that the analysed system is not actually a pure sinusoidal signal, and features distortion components. Through the Fourier Theory of Function Representation, the distorted version of $s(t)$ can be represented by:
+
+$s(t)=A_{S}cos(\omega_{S}t+\phi) + n(t) + \sum_{i}^{N}\alpha_i cos(\omega_it+\phi_i)$ (V)
+
+Therefore, the second order harmonic distortion is the power ratio between the second harmonic and the fundamental harmonic:
+
+- $HD2 = \frac{\alpha_2^2}{A_S^2}$ ($W.W^{-1}$)
+- $HD2_{dB} = 10.log_{10}(HD2)$ (dB)
 
 ### 5 - 3<sup>rd</sup> Order Harmonic Distortion (HD3)
 
+Following the same procedure as the one shown above, the thrid order harmonic distortion can be computed by:
+
+- $HD3 = \frac{\alpha_3^2}{A_S^2}$ ($W.W^{-1}$)
+- $HD3_{dB} = 10.log_{10}(HD3)$ (dB)
+
 ### 6 - Total Harmonic Distortion (THD)
+
+The ratio between the total power of every harmonic distortion component and the power of the fundamental harmonic will thus give the total harmonic distortion indicator of $s(t)$.
+
+- $THD = \frac{\sum_{i}^{N}\alpha_i^2}{A_S^2}$ ($W.W^{-1}$)
+- $THD = 10.log_{10}(THD)$ (dB)

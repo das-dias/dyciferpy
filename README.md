@@ -111,8 +111,8 @@ Detailed examples on the usage of this tool can be found in the following docume
 
 **Performance Analysis**
 - [ADC Performance Analysis](./docs/adc-example.md)
-- [CAOS Amplifier Performance Analysis](./docs/amplifier-example.md)
-- [DAOS Amplifier Performance Analysis](./docs/daos-amplifier.md)
+- [CAOS Amplifier Performance Analysis](./docs/caos-amplifier-example.md)
+- [DAOS Amplifier Performance Analysis](./docs/daos-amplifier-example.md)
   
 **Saving Images and Performance Indicators**
 - [Saving Tables](./docs/saving-tables.md)
