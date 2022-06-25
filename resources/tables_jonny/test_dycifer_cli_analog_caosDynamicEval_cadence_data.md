@@ -1,3 +1,3 @@
 |                               |   Output Signal Power (dB) |   Output DC Power (dB) |   Gain (out/in) |   Gain (dB) |   SFDR (dB) |   THD (dB) |   SNR (dB) |   SNDR (dB) |   HD2 |   HD3 |
 |:------------------------------|---------------------------:|-----------------------:|----------------:|------------:|------------:|-----------:|-----------:|------------:|------:|------:|
-| Dynamic Evaluation Indicators |                    -6.0206 |               -6.93575 |             nan |         nan |          20 |   -19.9568 |        nan |     19.9568 |   -20 |   -40 |
+| Dynamic Evaluation Indicators |                    -6.0206 |               -6.93575 |             nan |         nan |          20 |       -inf |    19.9568 |     19.9568 |   nan |   nan |

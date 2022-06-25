@@ -1,4 +1,5 @@
 import os
+from modelling_utils import Scale
 
 
 def getParent(path, levels=0):
@@ -27,6 +28,10 @@ def plotPrettyFFT(
     show: bool = False,
     target_harmonics: list = None,
     plot_to_terminal: bool = False,
+    xscale: str = "",
+    yscale: str = "",
+    xunit: str = "Hz",
+    yunit: str = "dB",
 ):
     """_summary_
     Plot a pretty FFT plot
@@ -40,6 +45,10 @@ def plotPrettyFFT(
         xlog (bool)     : log scale
         show (bool)     : show the plot
         target_harmonics (list): list (frequency, power) tuples of target harmonics to highlight
+        xscale (str)    : x-axis scale
+        yscale (str)    : y-axis scale
+        xunit (str)     : x-axis unit. Default is Hz (hertz)
+        yunit (str)     : y-axis unit. Default is dB (decibel)
     NOTE:
         kwargs example:
         kwargs = {
@@ -48,6 +57,7 @@ def plotPrettyFFT(
             "basefmt":"r-",
         }
     """
+    from loguru import logger as log
     import plotext as tplt
     import matplotlib.pyplot as plt
     from matplotlib import rcParams
@@ -67,6 +77,27 @@ def plotPrettyFFT(
     # markerline, stemlines, baseline = plt.stem(freq, power, bottom=min(power), use_line_collection=True, linefmt="b-", markerfmt="bD", basefmt="r-")
     # markerline.set_markerfacecolor("none")
     # stemlines.set_color("black")
+    x_scale = 1.0
+    if xscale != "":
+        letter_scales = [letter for (letter, _) in [elem.value for elem in Scale]]
+        value_scales = [value for (_, value) in [elem.value for elem in Scale]]
+        if xscale in letter_scales:
+            x_scale = value_scales[letter_scales.index(xscale)]
+        else:
+            log.warning(
+                f"\n[xscale] {xscale} not recognized. Possible scales are: {letter_scales}"
+            )
+    y_scale = 1.0
+    if yscale != "":
+        letter_scales = [letter for letter, _ in Scale.values]
+        value_scales = [value for _, value in Scale.values]
+        if yscale in letter_scales:
+            y_scale = value_scales[letter_scales.index(yscale)]
+        else:
+            log.warning(
+                f"\n[yscale] {yscale} not recognized. Possible scales are: {letter_scales}"
+            )
+
     harmonics = [
         (freq[where(power == max(power[1:]))][0], max(power[1:]))
     ]  # don't count the dc component
@@ -86,7 +117,7 @@ def plotPrettyFFT(
         )
         # line_styles = cycle(["-.", "--", "-.", "-", "--"])
         labels = [
-            f"H{x}@{f/1e9:.3f} GHz"
+            f"H{x}@{f:.3f} {xscale}{xunit}"
             for (x, f) in enumerate([f for f, _ in harmonics], start=1)
         ]
         """
@@ -102,7 +133,7 @@ def plotPrettyFFT(
             tplt.text(label, x, y - 0.06 * abs(y), color=color)
 
         tplt.grid()
-        tplt.title(title + f"- H1 Power={max(power[1:]):.2f} (dB)")
+        tplt.title(title + f"- H1 Power={max(power[1:]):.2f} ({yscale}{yunit})")
         tplt.xlabel(xlabel)
         tplt.ylabel(ylabel)
         if xlog:
@@ -118,11 +149,11 @@ def plotPrettyFFT(
             tplt.savefig(file_path)
         tplt.cld()
     else:
-        plt.plot(freq, power, "b-")
+        plt.plot(freq / x_scale, power / y_scale, "b-")
         markerline, _, _ = plt.stem(
-            freq,
-            power,
-            bottom=min(power),
+            freq / x_scale,
+            power / y_scale,
+            bottom=min(power / y_scale),
             use_line_collection=True,
             linefmt="b-",
             markerfmt="none",
@@ -132,20 +163,20 @@ def plotPrettyFFT(
         colours = cycle(["red", "brown", "green", "black", "magenta", "cyan", "yellow"])
         # line_styles = cycle(["-.", "--", "-.", "-", "--"])
         labels = [
-            f"H{x}@{f/1e9:.3f} GHz"
+            f"H{x}@{f/x_scale:.3f} ({xscale}{xunit})"
             for (x, f) in enumerate([f for f, _ in harmonics], start=1)
         ]
         plt.axhline(
-            max(power[1:]),
+            max(power[1:] / y_scale),
             color="k",
             linestyle="--",
             linewidth=3,
-            label=f"H1 Power={max(power[1:]):.2f} (dB)",
+            label=f"H1 Power={max(power[1:]/y_scale):.2f} ({yscale}{yunit})",
         )
         for color, harmonic, label in zip(colours, harmonics, labels):
             x = harmonic[0]
             y = harmonic[1]
-            plt.plot(x, [y], "D", color=color, label=label)
+            plt.plot(x / x_scale, [y / y_scale], "D", color=color, label=label)
 
         plt.grid()
         plt.title(title)

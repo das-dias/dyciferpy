@@ -247,11 +247,11 @@ class TestDycifer(unittest.TestCase):
             hd3,
         ) = caosDynamicEval(
             signals,
+            fs,
             "vout",
             input_signal_name="vin",
             signal_span_factor=0.00,
             noise_power=0.0,
-            downsampling=5,
         )  # 0.2 % of power spectral density leakage
         self.assertIsNotNone(out_spectrum)
         self.assertEqual(DataFrame, type(out_spectrum))
@@ -274,7 +274,7 @@ class TestDycifer(unittest.TestCase):
         # self.assertAlmostEqual(hd3, -40.00000000000053, places=3)
 
     def test_daosDynamicEval(self):
-
+        fs = 1e9  # sampling frequency
         file_path = "./resources/data/fft_points_c2c_256_bin7.csv"
         signals = readSignals(file_path)
         (
@@ -294,10 +294,10 @@ class TestDycifer(unittest.TestCase):
             bandwidth,
         ) = daosDynamicEval(
             signals,
+            fs,
             "bit0_sampled (V)",
             signal_span_factor=0.002,
             noise_power=0.0,
-            downsampling=5,
             wave_type="pulse",
             show_rise_time_eval=True,
         )  # 0.2 % of power spectral density leakage
@@ -325,6 +325,8 @@ class TestDycifer(unittest.TestCase):
         args = [
             "analog",
             "-caos",
+            "-fs",
+            "1 G",
             "-s",
             "./resources/data/test_signals3.csv",
             "-os",
@@ -345,6 +347,8 @@ class TestDycifer(unittest.TestCase):
         args = [
             "analog",
             "-daos",
+            "-fs",
+            "1 G",
             "-s",
             "./resources/data/fft_points_c2c_256_x2_bin11_noise.csv",
             "-os",

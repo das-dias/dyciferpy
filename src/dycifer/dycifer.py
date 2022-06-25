@@ -117,6 +117,13 @@ __cmd_args = {
             str,
             "opt",
         ),
+        "-fs": (
+            "--sampling-frequency",
+            "Sampling frequency of the parsed signals",
+            "FREQUENCY",
+            str,
+            "",
+        ),  # sampling frequency of the parsed signals is obligatory
         "-os": (
             "--output-signal",
             "Target output signal of the analysis",

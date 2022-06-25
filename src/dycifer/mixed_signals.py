@@ -28,9 +28,6 @@ def mixedSignalsDynamicEval(subparser, *args, **kwargs):
     # from the signals argument (containing the signals file filepath)
     # extract the signals
     signals = readSignals(argv.signals[0])
-    time_col = bool(
-        signals.index.name
-    )  # if the index column has a name, it is the time column
     if argv.analog_to_digital:
         sampling_freq = stof(
             argv.sampling_frequency[0]
@@ -57,7 +54,6 @@ def mixedSignalsDynamicEval(subparser, *args, **kwargs):
         ) = adcDynamicEval(
             signals,
             sampling_freq,
-            time_col=time_col,
             n_bits=res,
             v_source=v_source,
             harmonics=harmonics,
@@ -87,11 +83,12 @@ def mixedSignalsDynamicEval(subparser, *args, **kwargs):
                 ].index,  # plot only positive frequencies spectrum
                 spectrum[spectrum.index.values >= 0]["power_db"],
                 title="Signal Spectrum (dB)",
-                xlabel="Frequency (Hz)",
+                xlabel="Frequency (GHz)",
                 ylabel="Power (dB)",
                 show=True,
                 target_harmonics=target_harmonics,
                 plot_to_terminal=argv.plot_to_terminal,
+                xscale="G",
             )
         if bool(argv.output_file):
             plotPrettyFFT(
@@ -100,11 +97,12 @@ def mixedSignalsDynamicEval(subparser, *args, **kwargs):
                 ].index,  # plot only positive frequencies spectrum
                 spectrum[spectrum.index.values >= 0]["power_db"],
                 title="Signal Spectrum (dB)",
-                xlabel="Frequency (Hz)",
+                xlabel="Frequency (GHz)",
                 ylabel="Power (dB)",
                 show=False,
                 file_path=argv.output_file[0] + ".png",
                 target_harmonics=target_harmonics,
+                xscale="G",
             )
             if argv.generate_table:
                 tablename = argv.output_file[0]
@@ -133,7 +131,6 @@ def mixedSignalsDynamicEval(subparser, *args, **kwargs):
 def adcDynamicEval(
     signals: DataFrame,
     f_sampling: float,
-    time_col: bool = True,
     n_bits: int = -1,
     v_source: float = 1.0,
     harmonics: int = 7,
@@ -174,17 +171,25 @@ def adcDynamicEval(
     # extract the sampling frequency from the function inputs
     ts = 1.0 / f_sampling
     fs = f_sampling
-    if time_col:
-        if signals.index.values[1] - signals.index.values[0] != ts:
-            step_points = int(
-                round(ts / (signals.index.values[1] - signals.index.values[0]))
+    downsampling = 1
+    if bool(signals.index.name):
+        downsampling = int(
+            round(
+                (1.0 / f_sampling) / (signals.index.values[1] - signals.index.values[0])
             )
-            if step_points < 1:
-                raise ValueError(
-                    "Sampling time period must be equal or higher than the signals' time resolution."
-                )
-            # downsample the signals to the sampling frequency effectively parsed as input
-            signals = signals[::step_points]
+        )
+        if downsampling < 1:
+            raise ValueError(
+                "Sampling time period must be equal or higher than the signals' time resolution."
+            )
+    else:
+        # in case there is no time axis frame
+        # automatically generate one from the sampling frequency
+        t = np.arange(0, len(signals) * ts, ts)
+        signals.set_index(t, inplace=True)
+
+    # downsample the signals to the sampling frequency effectively parsed as input
+    signals = signals[::downsampling]
     """
     * ***********************************************************************************
     * * If the resolution of the ADC was parsed as input, it is assumed that the signals
@@ -207,11 +212,19 @@ def adcDynamicEval(
     """
     # compute the Dout signal for each row of the signals DataFrame
     dout = signals[signals.columns].copy()
+    vsource = v_source
     if n_bits < 0:
         # find the average value for the signals
         means = {}
+        maxis = []
+        minies = []
         for col in signals.columns:
             means[col] = signals[col].mean()
+            maxis.append(signals[col].max())
+            minies.append(signals[col].min())
+
+        vsource = max(maxis) + min(minies)
+
         for col in dout.columns:
             dout[col][dout[col] <= means[col]] = 0
             dout[col][dout[col] > means[col]] = 1
@@ -226,10 +239,10 @@ def adcDynamicEval(
         dout["dec_word"] = dout["bin_word"].apply(lambda bin: int(bin, 2))
         # recenter the decoded word in 0 and scale it to [-1; +1]
         dout["vout"] = dout["dec_word"] / (2**resolution - 1) * 2 - 1.0
-        dout["vout"] = dout["vout"] * v_source
+        dout["vout"] = dout["vout"] * vsource
     else:
         dout["vout"] = dout[dout.columns] / (2**resolution - 1) * 2 - 1.0
-        dout["vout"] = dout["vout"] * v_source
+        dout["vout"] = dout["vout"] * vsource
     if noise_power > 0:
         noise_watt = (10 ** (noise_power / 10)) * 1e-3
         dout["vout"] = dout["vout"] + np.random.normal(
@@ -306,6 +319,7 @@ def adcDynamicEval(
         ]
     )
     # obtain the signal_power
+
     signal_power = harmonics_power[0]
     SIGNAL_POWER_DB = 10 * np.log10(signal_power)
     signal_dc_power = np.sum(pspectrum["power"].iloc[0 : 0 + span].values)
@@ -339,39 +353,50 @@ def adcDynamicEval(
     #  - Obtain the power of each harmonic component
     # ********************************************
     # compute the total power of the sum of the harmonics
-    total_distortion_power = np.sum(harmonics_power[1:])
-    THD = 10 * np.log10(total_distortion_power / harmonics_power[0])
-    # ********************************************
-    # Computing SNR - Signal to Noise Ratio
-    #  - Obtain the noise power in the spectrum
-    # ********************************************
-    noise_power = (
-        np.sum(pspectrum["power"].values)
-        - signal_dc_power
-        - signal_power
-        - total_distortion_power
-    )
-    SNR = 10 * np.log10(signal_power / noise_power)
-    # ********************************************
-    # Computing SNDR - Signal to Noise & Distortion Ratio
-    #  - Add the noise and distortion power in
-    #     the spectrum and compare them to the
-    #     signal power
-    # ********************************************
-    SNDR = 10 * np.log10(signal_power / (noise_power + total_distortion_power))
-    # ********************************************
-    # Computing ENOB - Effective Number of Bits
-    #  - Check deterioration of the ADC's
-    #    ideal resolution because of the SNDR
-    # ********************************************
-    ENOB = (SNDR - 1.76) / 6.02
-    # ********************************************
-    # Computing HD2 and HD3 - Fractional Harmonic
-    # Distortion of Second and Third order
-    # harmonics
-    # ********************************************
-    HD2 = 10 * np.log10(harmonics_power[1] / harmonics_power[0])
-    HD3 = 10 * np.log10(harmonics_power[2] / harmonics_power[0])
+    THD = np.nan
+    SNR = np.nan
+    SNDR = np.nan
+    ENOB = np.nan
+    HD2 = np.nan
+    HD3 = np.nan
+    try:
+        total_distortion_power = np.sum(harmonics_power[1:])
+        THD = 10 * np.log10(total_distortion_power / harmonics_power[0])
+        # ********************************************
+        # Computing SNR - Signal to Noise Ratio
+        #  - Obtain the noise power in the spectrum
+        # ********************************************
+        noise_power = (
+            np.sum(pspectrum["power"].values)
+            - signal_dc_power
+            - signal_power
+            - total_distortion_power
+        )
+        SNR = 10 * np.log10(signal_power / noise_power)
+        # ********************************************
+        # Computing SNDR - Signal to Noise & Distortion Ratio
+        #  - Add the noise and distortion power in
+        #     the spectrum and compare them to the
+        #     signal power
+        # ********************************************
+        SNDR = 10 * np.log10(signal_power / (noise_power + total_distortion_power))
+        # ********************************************
+        # Computing ENOB - Effective Number of Bits
+        #  - Check deterioration of the ADC's
+        #    ideal resolution because of the SNDR
+        # ********************************************
+        ENOB = (SNDR - 1.76) / 6.02
+        # ********************************************
+        # Computing HD2 and HD3 - Fractional Harmonic
+        # Distortion of Second and Third order
+        # harmonics
+        # ********************************************
+        HD2 = 10 * np.log10(harmonics_power[1] / harmonics_power[0])
+        HD3 = 10 * np.log10(harmonics_power[2] / harmonics_power[0])
+    except IndexError:
+        log.warning(
+            f"\nTried to access an harmonic that was not found in the frequency domain of the analysed spectrum.\nThis is likely due to the fact that the chosen sampling frequency is \nviolating the Nyquist Theorem in relation to the 2nd or 3rd Order Harmonics.\nTry to increase the sampling frequency."
+        )
     target_harmonics = list(zip(harmonic_bins, 10 * np.log10(harmonics_power)))
     return (
         spectrum,

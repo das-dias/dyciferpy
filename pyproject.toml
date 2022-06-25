@@ -19,6 +19,8 @@ modelling-utils = "^0.2.11"
 tabulate = "^0.8.9"
 colorama = "^0.4.5"
 plotext = "^5.0.2"
+toml = "^0.10.2"
+Markdown = "^3.3.7"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
@@ -36,3 +38,8 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 dycifer = "dycifer.dycifer:cli"
+
+# convertion from pyproject to setup.py
+[tool.dephell.main]
+from={fromat="poetry", path="pyproject.toml"}
+to={format="setuppy", path="setup.py"}

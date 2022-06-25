@@ -30,6 +30,12 @@ def analogDynamicEval(subparser, *args, **kwargs):
     # extract the signals
     signals = readSignals(argv.signals[0])
     if argv.continuous_aos:
+        print(
+            "Running Continuous Amplitude Output System (CAOS) Dynamic Performance Evaluation..."
+        )
+        sampling_freq = stof(
+            argv.sampling_frequency[0]
+        )  # convert the parsed string to a float
         input_signal = argv.input_signal[0] if bool(argv.input_signal) else None
         output_signal = argv.output_signal[0]
         harmonics = argv.harmonics[0] if bool(argv.harmonics) else 7
@@ -52,6 +58,7 @@ def analogDynamicEval(subparser, *args, **kwargs):
             hd3,
         ) = caosDynamicEval(
             signals,
+            sampling_freq,
             output_signal,
             input_signal_name=input_signal,
             harmonics=harmonics,
@@ -81,12 +88,13 @@ def analogDynamicEval(subparser, *args, **kwargs):
                 ].index,  # plot only positive frequencies spectrum
                 spectrum[spectrum.index.values >= 0]["power_db"],
                 title="Signal Spectrum (dB)",
-                xlabel="Frequency (Hz)",
+                xlabel="Frequency (GHz)",
                 ylabel="Power (dB)",
                 show=True,
                 xlog=False,
                 target_harmonics=target_harmonics,
                 plot_to_terminal=argv.plot_to_terminal,
+                xscale="G",
             )
         if bool(argv.output_file):
             plotPrettyFFT(
@@ -95,11 +103,12 @@ def analogDynamicEval(subparser, *args, **kwargs):
                 ].index,  # plot only positive frequencies spectrum
                 spectrum[spectrum.index.values >= 0]["power_db"],
                 title="Signal Spectrum (dB)",
-                xlabel="Frequency (Hz)",
+                xlabel="Frequency (GHz)",
                 ylabel="Power (dB)",
                 show=False,
                 file_path=argv.output_file[0] + ".png",
                 target_harmonics=target_harmonics,
+                xscale="G",
             )
             if argv.generate_table:
                 tablename = argv.output_file[0]
@@ -110,7 +119,13 @@ def analogDynamicEval(subparser, *args, **kwargs):
         # print indicators to console
         print()
         print(dynamic_eval_indicators.T)
-    elif bool(argv.discrete_aos):
+    elif argv.discrete_aos:
+        print(
+            "Running Discrete Amplitude Output System (DAOS) Dynamic Performance Evaluation..."
+        )
+        sampling_freq = stof(
+            argv.sampling_frequency[0]
+        )  # convert the parsed string to a float
         wave_type = argv.waveform[0] if bool(argv.waveform) else "default"
         upper_level = argv.risetime_level[0] if bool(argv.risetime_level) else 0.9
         input_signal = argv.input_signal[0] if bool(argv.input_signal) else None
@@ -135,6 +150,7 @@ def analogDynamicEval(subparser, *args, **kwargs):
             bandwidth,
         ) = daosDynamicEval(
             signals,
+            sampling_freq,
             output_signal,
             input_signal_name=input_signal,
             harmonics=harmonics,
@@ -169,12 +185,13 @@ def analogDynamicEval(subparser, *args, **kwargs):
                 ].index,  # plot only positive frequencies spectrum
                 spectrum[spectrum.index.values >= 0]["power_db"],
                 title="Signal Spectrum (dB)",
-                xlabel="Frequency (Hz)",
+                xlabel="Frequency (GHz)",
                 ylabel="Power (dB)",
                 show=True,
                 xlog=False,
                 target_harmonics=target_harmonics,
                 plot_to_terminal=argv.plot_to_terminal,
+                xscale="G",
             )
         if bool(argv.output_file):
             plotPrettyFFT(
@@ -183,11 +200,12 @@ def analogDynamicEval(subparser, *args, **kwargs):
                 ].index,  # plot only positive frequencies spectrum
                 spectrum[spectrum.index.values >= 0]["power_db"],
                 title="Signal Spectrum (dB)",
-                xlabel="Frequency (Hz)",
+                xlabel="Frequency (GHz)",
                 ylabel="Power (dB)",
                 show=False,
                 file_path=argv.output_file[0] + ".png",
                 target_harmonics=target_harmonics,
+                xscale="G",
             )
             if argv.generate_table:
                 tablename = argv.output_file[0]
@@ -209,17 +227,18 @@ def analogDynamicEval(subparser, *args, **kwargs):
 @timer
 def caosDynamicEval(
     signals: DataFrame,
+    sampling_frequency: float,
     output_signal_name: str,
     input_signal_name: str = None,
     harmonics: int = 7,
     signal_span_factor: float = 0.0,
     noise_power: float = -1.0,
-    downsampling: int = 1,
 ) -> tuple[DataFrame, float, float, float, float, float, float, float, float]:
     """_summary_
     Dynamic performance evaluation of Continuous Analog Output Systems (CAOS)
     Args:
         signals (DataFrame): The time series data with all the correspondant signals.
+        sampling_frequency (float): The sampling frequency of the signals.
         harmonics (int, optional): The number of harmonics to be used in the CAOS. Defaults to 7.
         signal_span_factor (float, optional): The factor to be used to scale the signal span. Defaults to 0.0.
         noise_power (float, optional): The noise power to be used in the CAOS. Defaults to -1.0.
@@ -240,14 +259,32 @@ def caosDynamicEval(
             float(9): Fractional Second-Harmonic Distortion (HD2) metric
             float(10): Fractional Third-Harmonic Distortion (HD3) metric
     """
+    downsampling = 1
+    ts = 1.0 / sampling_frequency
+    fs = 1.0 / ts
     if not bool(signals.index.name):
-        raise ValueError("The signals DataFrame must have time axis.")
+        # in case there is no time axis frame
+        # automatically generate one from the sampling frequency
+
+        t = np.arange(0, len(signals) * ts, ts)
+        signals.set_index(t, inplace=True)
+    else:
+        downsampling = int(
+            round(
+                (1.0 / sampling_frequency)
+                / (signals.index.values[1] - signals.index.values[0])
+            )
+        )
+        if downsampling < 1:
+            raise ValueError(
+                "Sampling time period must be equal or higher than the signals' time resolution."
+            )
     if not (output_signal_name in signals.columns):
         raise ValueError(f"{output_signal_name} does not belong to the parsed signals.")
     # perform downsampling if so was chosen
     signals = signals[::downsampling]
-    ts = signals.index.values[1] - signals.index.values[0]
-    fs = 1.0 / ts
+    # ts = signals.index.values[1] - signals.index.values[0]
+    # fs = 1.0 / ts
     n_samples = len(signals.index)
     if noise_power > 0:
         noise_watt = (10 ** (noise_power / 10)) * 1e-3
@@ -343,34 +380,49 @@ def caosDynamicEval(
     #  - Obtain the power of each harmonic component
     # ********************************************
     # compute the total power of the sum of the harmonics
-    total_distortion_power = np.sum(harmonics_power[1:])
-    THD = 10 * np.log10(total_distortion_power / harmonics_power[0])
-    # ********************************************
-    # Computing SNR - Signal to Noise Ratio
-    #  - Obtain the noise power in the spectrum
-    # ********************************************
-
-    noise_power = (
-        np.sum(pspectrum["power"].values)
-        - signal_dc_power
-        - signal_power
-        - total_distortion_power
-    )
-    SNR = 10 * np.log10(signal_power / noise_power)
-    # ********************************************
-    # Computing SNDR - Signal to Noise & Distortion Ratio
-    #  - Add the noise and distortion power in
-    #     the spectrum and compare them to the
-    #     signal power
-    # ********************************************
-    SNDR = 10 * np.log10(signal_power / (noise_power + total_distortion_power))
-    # ********************************************
-    # Computing HD2 and HD3 - Fractional Harmonic
-    # Distortion of Second and Third order
-    # harmonics
-    # ********************************************
-    HD2 = 10 * np.log10(harmonics_power[1] / harmonics_power[0])
-    HD3 = 10 * np.log10(harmonics_power[2] / harmonics_power[0])
+    THD = np.nan
+    SNR = np.nan
+    SNDR = np.nan
+    HD2 = np.nan
+    HD3 = np.nan
+    try:
+        total_distortion_power = np.sum(harmonics_power[1:])
+        THD = 10 * np.log10(total_distortion_power / harmonics_power[0])
+        # ********************************************
+        # Computing SNR - Signal to Noise Ratio
+        #  - Obtain the noise power in the spectrum
+        # ********************************************
+        noise_power = (
+            np.sum(pspectrum["power"].values)
+            - signal_dc_power
+            - signal_power
+            - total_distortion_power
+        )
+        SNR = 10 * np.log10(signal_power / noise_power)
+        # ********************************************
+        # Computing SNDR - Signal to Noise & Distortion Ratio
+        #  - Add the noise and distortion power in
+        #     the spectrum and compare them to the
+        #     signal power
+        # ********************************************
+        SNDR = 10 * np.log10(signal_power / (noise_power + total_distortion_power))
+        # ********************************************
+        # Computing ENOB - Effective Number of Bits
+        #  - Check deterioration of the ADC's
+        #    ideal resolution because of the SNDR
+        # ********************************************
+        ENOB = (SNDR - 1.76) / 6.02
+        # ********************************************
+        # Computing HD2 and HD3 - Fractional Harmonic
+        # Distortion of Second and Third order
+        # harmonics
+        # ********************************************
+        HD2 = 10 * np.log10(harmonics_power[1] / harmonics_power[0])
+        HD3 = 10 * np.log10(harmonics_power[2] / harmonics_power[0])
+    except IndexError:
+        log.warning(
+            f"\nTried to access an harmonic that was not found in the frequency domain of the analysed spectrum.\nThis is likely due to the fact that the chosen sampling frequency is \nviolating the Nyquist Theorem in relation to the 2nd or 3rd Order Harmonics.\nTry to increase the sampling frequency."
+        )
     # ********************************************
     # Computing Gain - Output Signal amplitude
     # to Input Signal amplitude ratio
@@ -420,7 +472,7 @@ def caosDynamicEval(
             .values
         )
         GAIN = np.sqrt(signal_power / input_signal_power)
-        GAIN_DB = 10 * np.log10(GAIN)
+        GAIN_DB = 20 * np.log10(GAIN)
     target_harmonics = list(zip(harmonic_bins, 10 * np.log10(harmonics_power)))
     return (
         spectrum,
@@ -455,12 +507,12 @@ class WaveTypes(Enum):
 @timer
 def daosDynamicEval(
     signals: DataFrame,
+    sampling_frequency: float,
     output_signal_name: str,
     input_signal_name: str = None,
     harmonics: int = 7,
     signal_span_factor: float = 0.0,
     noise_power: float = -1.0,
-    downsampling: int = 1,
     wave_type: str = "default",
     levels: tuple = (0.1, 0.9),
     show_rise_time_eval: bool = False,
@@ -484,10 +536,11 @@ def daosDynamicEval(
     Dynamic performance evaluation of Discrete Analog Output Systems (CAOS)
     Args:
         signals (DataFrame): The time series data with all the correspondant signals.
+        sampling_frequency (float): The sampling frequency of the signals.
+        output_signal_name (str): The name of the output signal.
         harmonics (int, optional): The number of harmonics to be used in the CAOS. Defaults to 7.
         signal_span_factor (float, optional): The factor to be used to scale the signal span. Defaults to 0.0.
         noise_power (float, optional): The noise power to be used in the CAOS. Defaults to -1.0.
-        output_signal_name (str): The name of the output signal.
         input_signal_name (str, optional): The name of the input signal. Defaults to None. In no input signal is provided,
         the Gain of the system will not be computed.
         wave_type (str, optional): The type of wave to be used in the DAOS. Defaults to "pulse". Options:
@@ -508,15 +561,32 @@ def daosDynamicEval(
         float(11): Average Rise Time (ns) in 90% of the signal
         float(12): Estimated Bandwidth (Hz) of the output signal
     """
-
+    downsampling = 1
+    ts = 1.0 / sampling_frequency
+    fs = 1.0 / ts
     if not bool(signals.index.name):
-        raise ValueError("The signals DataFrame must have time axis.")
+        # in case there is no time axis frame
+        # automatically generate one from the sampling frequency
+        # ts = 1.0 / sampling_frequency
+        t = np.arange(0, len(signals) * ts, ts)
+        signals.set_index(t, inplace=True)
+    else:
+        downsampling = int(
+            round(
+                (1.0 / sampling_frequency)
+                / (signals.index.values[1] - signals.index.values[0])
+            )
+        )
+        if downsampling < 1:
+            raise ValueError(
+                "Sampling time period must be equal or higher than the signals' time resolution."
+            )
     if not (output_signal_name in signals.columns):
         raise ValueError(f"{output_signal_name} does not belong to the parsed signals.")
     # perform downsampling if so was chosen
     signals = signals[::downsampling]
-    ts = signals.index.values[1] - signals.index.values[0]
-    fs = 1.0 / ts
+    # ts = signals.index.values[1] - signals.index.values[0]
+    # fs = 1.0 / ts
     n_samples = len(signals.index)
     if noise_power > 0:
         noise_watt = (10 ** (noise_power / 10)) * 1e-3
@@ -610,40 +680,48 @@ def daosDynamicEval(
     #  - Obtain the power of each harmonic component
     # ********************************************
     # compute the total power of the sum of the harmonics
-    total_distortion_power = np.sum(harmonics_power[1:])
-    THD = 10 * np.log10(total_distortion_power / harmonics_power[0])
-    # ********************************************
-    # Computing SNR - Signal to Noise Ratio
-    #  - Obtain the noise power in the spectrum
-    # ********************************************
-
-    noise_power = (
-        np.sum(pspectrum["power"].values)
-        - signal_dc_power
-        - signal_power
-        - total_distortion_power
-    )
-    SNR = 10 * np.log10(signal_power / noise_power)
-    # ********************************************
-    # Computing SNDR - Signal to Noise & Distortion Ratio
-    #  - Add the noise and distortion power in
-    #     the spectrum and compare them to the
-    #     signal power
-    # ********************************************
-    SNDR = 10 * np.log10(signal_power / (noise_power + total_distortion_power))
-    # ********************************************
-    # Computing HD2 and HD3 - Fractional Harmonic
-    # Distortion of Second and Third order
-    # harmonics
-    # ********************************************
+    THD = np.nan
+    SNR = np.nan
+    SNDR = np.nan
     HD2 = np.nan
     HD3 = np.nan
     try:
+        total_distortion_power = np.sum(harmonics_power[1:])
+        THD = 10 * np.log10(total_distortion_power / harmonics_power[0])
+        # ********************************************
+        # Computing SNR - Signal to Noise Ratio
+        #  - Obtain the noise power in the spectrum
+        # ********************************************
+        noise_power = (
+            np.sum(pspectrum["power"].values)
+            - signal_dc_power
+            - signal_power
+            - total_distortion_power
+        )
+        SNR = 10 * np.log10(signal_power / noise_power)
+        # ********************************************
+        # Computing SNDR - Signal to Noise & Distortion Ratio
+        #  - Add the noise and distortion power in
+        #     the spectrum and compare them to the
+        #     signal power
+        # ********************************************
+        SNDR = 10 * np.log10(signal_power / (noise_power + total_distortion_power))
+        # ********************************************
+        # Computing ENOB - Effective Number of Bits
+        #  - Check deterioration of the ADC's
+        #    ideal resolution because of the SNDR
+        # ********************************************
+        ENOB = (SNDR - 1.76) / 6.02
+        # ********************************************
+        # Computing HD2 and HD3 - Fractional Harmonic
+        # Distortion of Second and Third order
+        # harmonics
+        # ********************************************
         HD2 = 10 * np.log10(harmonics_power[1] / harmonics_power[0])
         HD3 = 10 * np.log10(harmonics_power[2] / harmonics_power[0])
     except IndexError:
         log.warning(
-            "\nHarmonics of order above the fundamental were not accessible.\nThis is likely because the sampling frequency (Fs) \n is lower than the signal's fundamental frequency."
+            f"\nTried to access an harmonic that was not found in the frequency domain of the analysed spectrum.\nThis is likely due to the fact that the chosen sampling frequency is \nviolating the Nyquist Theorem in relation to the 2nd or 3rd Order Harmonics.\nTry to increase the sampling frequency."
         )
     # ********************************************
     # Computing Gain - Output Signal amplitude
@@ -694,7 +772,7 @@ def daosDynamicEval(
             .values
         )
         GAIN = np.sqrt(signal_power / input_signal_power)
-        GAIN_DB = 10 * np.log10(GAIN)
+        GAIN_DB = 20 * np.log10(GAIN)
     # ********************************************
     # Computing output signal's
     # risetime @90% signal variation

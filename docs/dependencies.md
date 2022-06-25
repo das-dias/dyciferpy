@@ -1,0 +1,12 @@
+## Dependencies
+- ```python``` == >=3.9,<3.11
+- ```numpy``` == ^1.22.4
+- ```pandas``` == ^1.4.2
+- ```pyfiglet``` == ^0.8.post1
+- ```matplotlib``` == ^3.5.2
+- ```argparse``` == ^1.4.0
+- ```loguru``` == ^0.6.0
+- ```modelling-utils``` == ^0.2.11
+- ```tabulate``` == ^0.8.9
+- ```colorama``` == ^0.4.5
+- ```plotext``` == ^5.0.2
