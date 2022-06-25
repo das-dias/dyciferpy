@@ -312,7 +312,7 @@ class TestDycifer(unittest.TestCase):
         )
         """
 
-        self.assertAlmostEqual(signal_power, -15.101824930016974, places=3)
+        self.assertAlmostEqual(signal_power, -16.330484099692018, places=3)
         self.assertAlmostEqual(dc_power, -8.791215150649549, places=3)
         self.assertEqual(type(gain), type(np.nan))
         self.assertAlmostEqual(rise_time_90, 3.199360000000003e-09)
