@@ -13,7 +13,7 @@ from pandas import DataFrame
 
 class TestDycifer(unittest.TestCase):
     def test_version(self):
-        self.assertTrue(__version__ == "0.1.0")
+        self.assertTrue(__version__ == "0.1.1")
 
     def test_readSignals(self):
         file_path = "./resources/data/test_signals.csv"

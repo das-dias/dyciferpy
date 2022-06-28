@@ -1,4 +1,209 @@
-<p><img src="./docs/imgs/algarvia2.png" alt="algarvia2" /> # DYCIFER
-<code>Dynamic Circuit Performance Evaluation Tool (DYCIFER)</code> is a
-tool written in <code>Python</code> that allows for the extraction of
-the Performance Indicators of Dynamic Integrated Circuits.</p>
+<p><img
+src="https://img.shields.io/github/workflow/status/das-dias/dyciferpy/dycifer"
+alt="GitHub Workflow Status" /> <img
+src="https://img.shields.io/github/license/das-dias/dyciferpy"
+alt="GitHub" /> <img
+src="https://img.shields.io/github/issues/das-dias/dyciferpy"
+alt="GitHub issues" /> <img
+src="https://img.shields.io/github/package-json/v/das-dias/dyciferpy/master"
+alt="GitHub package.json version (branch)" /> <img
+src="https://img.shields.io/github/last-commit/das-dias/dyciferpy"
+alt="GitHub last commit" /></p>
+<figure>
+<img src="./docs/imgs/DYCIFER2.png" alt="banner" />
+<figcaption aria-hidden="true">banner</figcaption>
+</figure>
+<p><code>Dynamic Circuit Performance Evaluation Tool (DYCIFER)</code></p>
+<p>is a tool written in <code>Python</code> that allows for the
+extraction of the Performance Indicators of Dynamic Integrated Circuits.
+Through the analysis of each system’s signals (both input and output),
+the tool will be able to extract indicators such as the <em>Total
+Harmonic Distortion</em> (THD) or <em>Signal to Noise &amp; Distortion
+Ratio</em> (SNDR) of dynamic integrated circuit.</p>
+<h2 id="how-does-it-work">How does it work</h2>
+<p>Any integrated circuit designer can simulate the time response of an
+implemented system through a <em>Transient Analysis</em>, which is a
+basic concept of Electric Circuits Theory. The exported data to Comma
+Separated Values files (.CSV) can be parsed as input to the tool. In the
+examples provided, ®Cadence Virtuoso’s time response simulator was used
+to obtain some of the time response data.</p>
+<figure>
+<img src="./docs/imgs/fft-algo-inverted.png" alt="fft-algo" />
+<figcaption aria-hidden="true">fft-algo</figcaption>
+</figure>
+<p>From the simulated time response data of the system we want to
+analyze, the <a href="URL"
+title="brilliant.org/wiki/discrete-fourier-transform/"><em>Fast Fourier
+Transform</em> (FFT)</a> (core) algorithm is used to enable the
+extraction of all the <em>Dynamic Circuit Performance Indicators</em>
+listed in the table below. From these indicators, an integrated circuit
+designer can eccurately measure the performance of the designed
+system.</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Performance Indicator</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="./docs/indicators.md">Signal Strength</a></td>
+<td>Power of the analysed signal</td>
+</tr>
+<tr class="even">
+<td><a href="./docs/indicators.md">DC Signal Strength</a></td>
+<td>Power of the DC component of the analysed signal</td>
+</tr>
+<tr class="odd">
+<td><a href="./docs/enob.md">ENOB</a></td>
+<td>Effective Number of Bits</td>
+</tr>
+<tr class="even">
+<td><a href="./docs/indicators.md">SFDR</a></td>
+<td>Spurious Free Dynamic Range</td>
+</tr>
+<tr class="odd">
+<td><a href="./docs/indicators.md">SNR</a></td>
+<td>Signal to Noise Ratio</td>
+</tr>
+<tr class="even">
+<td><a href="./docs/indicators.md">THD</a></td>
+<td>Total Harmonic Distortion</td>
+</tr>
+<tr class="odd">
+<td><a href="./docs/indicators.md">SNDR</a></td>
+<td>Signal to Noise &amp; Distortion Ratio</td>
+</tr>
+<tr class="even">
+<td><a href="./docs/indicators.md">HD2</a></td>
+<td>2nd Order Harmonic Distortion Ratio</td>
+</tr>
+<tr class="odd">
+<td><a href="./docs/indicators.md">HD3</a></td>
+<td>3rd Order Harmonic Distortion Ratio</td>
+</tr>
+<tr class="even">
+<td><a href="./docs/indicators.md">Gain</a></td>
+<td>Power Ratio between the Output and Input signals</td>
+</tr>
+<tr class="odd">
+<td><a href="./docs/rise-time.md">Rise Time [90%]</a></td>
+<td>The total time it takes the signal to rise from 10% up to 90% of its
+total amplitude - only important in pulse responses or pulse modulated
+signals.</td>
+</tr>
+<tr class="even">
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="dependencies">Dependencies</h2>
+<ul>
+<li><a href="URL" title="https://python-poetry.org/docs/">Poetry</a> -
+<code>Poetry</code> is the default ®Python package manager, and it
+allows to easily deploy and install any project or package written in
+Python language.</li>
+</ul>
+<p>Other <a href="./docs/dependencies.md">package dependencies</a></p>
+<h2 id="installation">Installation</h2>
+<p>It is highly recommended to use <code>Poetry</code> in order to
+install <code>DYCIFER</code> because it will automatically setup the
+virtual environment and package dependencies necessary to run this
+tool.<br />
+First of all, <code>git-clone</code> this repository into a
+directory:</p>
+<figure>
+<img src="./docs/imgs/carbon-gitclone.png" alt="git-clone" />
+<figcaption aria-hidden="true">git-clone</figcaption>
+</figure>
+<pre><code>git clone https://github.com/das-dias/dyciferpy.git</code></pre>
+<p>Alternatively, you can <a href="URL"
+title="https://github.com/das-dias/dyciferpy/archive/refs/heads/master.zip">download</a>
+this repo’s <code>.zip</code> file and extract it into a personal
+directory, if you don’t have <a href="URL"
+title="https://git-scm.com/book/en/v2/Getting-Started-Installing-Git">git</a>
+installed in your machine.</p>
+<p>Next, using <code>Poetry</code>, inside the downloaded repository
+directory, run the installation command:</p>
+<figure>
+<img src=".docs/../docs/imgs/carbon-poetryinstall.png"
+alt="poetry-install" />
+<figcaption aria-hidden="true">poetry-install</figcaption>
+</figure>
+<pre><code>poetry install</code></pre>
+<h2 id="usage">Usage</h2>
+<h3 id="asking-for-help">Asking for help</h3>
+<pre><code>poetry run dycifer | -h | --help</code></pre>
+<figure>
+<img src=".docs/../docs/imgs/general-help.gif" alt="General Help" />
+<figcaption aria-hidden="true">General Help</figcaption>
+</figure>
+<p><code>DYCIFER</code> is a tool designed to run on the console, and as
+such it features a neat-looking <em>Command Line Interface</em> (CLI)
+that allows for an easy interaction with its sub-frameworks:</p>
+<ul>
+<li>Mixed-signals Integrated Circuits dedicated framework</li>
+<li>Analog Integrated Circuits dedicated framework</li>
+</ul>
+<h3 id="mixed-signals-integrated-circuit-performance-analysis">Mixed
+Signals Integrated Circuit Performance Analysis</h3>
+<pre><code>poetry run dycifer mixedsignals | -h | --help</code></pre>
+<figure>
+<img src=".docs/../docs/imgs/mixedsignals-help.gif"
+alt="Mixed-Signals Help" />
+<figcaption aria-hidden="true">Mixed-Signals Help</figcaption>
+</figure>
+<p>This sub-framework is mainly dedicated to provide automated
+performance analysis to the following systems:</p>
+<ul>
+<li>Analog-to-Digital Converters (ADC) (considering parallel output bit
+lines)</li>
+<li>Digital-to-Analog Converters (DAC) <span style="color:red"> (NOT
+IMPLEMENTED YET) </span></li>
+<li><span class="math inline"><em>Σ</em><em>Δ</em></span> (Sigma-Delta)
+ADC (considering serial <a href="URL"
+title="https://en.wikipedia.org/wiki/Pulse-width_modulation"><em>Pulse
+Width Modulated</em></a> output signal line) <span style="color:red">
+(NOT IMPLEMENTED YET) </span></li>
+<li><span class="math inline"><em>Σ</em><em>Δ</em></span> DAC <span
+style="color:red"> (NOT IMPLEMENTED YET) </span></li>
+</ul>
+<h3 id="analog-integrated-circuit-performance-analysis">Analog
+Integrated Circuit Performance Analysis</h3>
+<pre><code>poetry run dycifer analog | -h | --help</code></pre>
+<figure>
+<img src=".docs/../docs/imgs/analog-help.gif" alt="Analog Help" />
+<figcaption aria-hidden="true">Analog Help</figcaption>
+</figure>
+<p>This sub-framework provides coverage to two classes of analog
+integrated systems:</p>
+<ul>
+<li>Continuous Amplitude Output Systems (CAOS)</li>
+<li>Discrete Amplitude Output Systems (DAOS)</li>
+</ul>
+<p>The discrimination of analog systems in these two classes provide for
+powerful, simplified methods to retrieve the performance indicators of
+(e.g.)</p>
+<ul>
+<li><p>Transient responses resembling square (or pulse) waves, or pulse
+modulated sinusoidal waves, regarding DAOS systems</p></li>
+<li><p>Sinusoidal waves (impure/distorted/noisy or pure), regarding CAOS
+systems</p></li>
+</ul>
+<h2 id="examples">Examples</h2>
+<p>Detailed examples on the usage of this tool can be found in the
+following documents:</p>
+<p><strong>Performance Analysis</strong> - <a
+href="./docs/adc-example.md">ADC Performance Analysis</a> - <a
+href="./docs/caos-amplifier-example.md">CAOS Amplifier Performance
+Analysis</a> - <a href="./docs/daos-amplifier-example.md">DAOS Amplifier
+Performance Analysis</a></p>
+<p><strong>Saving Images and Performance Indicators</strong> - <a
+href="./docs/saving-tables.md">Saving Tables</a> - <a
+href="./docs/saving-images.md">Saving Images</a></p>
