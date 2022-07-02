@@ -109,15 +109,17 @@ def plotPrettyFFT(
         argsort(new_freq)
     ]
     if plot_to_terminal and show:
-        tplt.plot(freq, power)
-        tplt.ylim(min(power), max(power) + abs(max(power)) * 1.1)
+        tplt.plot(freq / x_scale, power / y_scale)
+        tplt.ylim(
+            min(power / y_scale), max(power / y_scale) + abs(max(power / y_scale)) * 1.1
+        )
         # plot the marks of the harmonics
         colours = cycle(
             ["red+", "gray+", "green+", "white", "magenta+", "cyan+", "yellow+"]
         )
         # line_styles = cycle(["-.", "--", "-.", "-", "--"])
         labels = [
-            f"H{x}@{f:.3f} {xscale}{xunit}"
+            f"H{x}@{f/x_scale:.3f} {xscale}{xunit}"
             for (x, f) in enumerate([f for f, _ in harmonics], start=1)
         ]
         """
@@ -129,11 +131,13 @@ def plotPrettyFFT(
         for color, harmonic, label in zip(colours, harmonics, labels):
             x = harmonic[0]
             y = harmonic[1]
-            tplt.plot([x], [y], marker="sd", color=color)
-            tplt.text(label, x, y - 0.06 * abs(y), color=color)
+            tplt.plot([x / x_scale], [y / y_scale], marker="sd", color=color)
+            tplt.text(
+                label, x / x_scale, y / y_scale - 0.06 * abs(y / y_scale), color=color
+            )
 
         tplt.grid()
-        tplt.title(title + f"- H1 Power={max(power[1:]):.2f} ({yscale}{yunit})")
+        tplt.title(title + f"- H1 Power={max(power[1:]/y_scale):.2f} ({yscale}{yunit})")
         tplt.xlabel(xlabel)
         tplt.ylabel(ylabel)
         if xlog:
