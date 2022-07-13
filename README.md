@@ -77,7 +77,6 @@ poetry run dycifer | -h | --help
 poetry run dycifer mixedsignals | -h | --help
 ```
 
-![Mixed-Signals Help](.docs/../docs/imgs/mixedsignals-help.gif)
 
 This sub-framework is mainly dedicated to provide automated performance analysis to the following systems:
 
@@ -91,8 +90,6 @@ This sub-framework is mainly dedicated to provide automated performance analysis
 ```
 poetry run dycifer analog | -h | --help
 ```
-
-![Analog Help](.docs/../docs/imgs/analog-help.gif)
 
 This sub-framework provides coverage to two classes of analog integrated systems:
 
